@@ -4,6 +4,8 @@ dist/
 dist-ssr/
 *.local
 .agent/
+docs/
+J2EE_QLKTX-PhongTro/
 
 # Environment Variables 
 .env

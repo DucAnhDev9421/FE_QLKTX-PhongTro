@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { ArrowLeft, Home, MapPin, Maximize, Shield, Users, Wifi } from 'lucide-react';
+import { ArrowLeft, Home, MapPin, Maximize, Shield, Users, Wifi, Sun, Moon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Room } from '../../types';
 import { mockBuildings, mockRoomTypes, mockRooms } from '../../mock/data';
+import demoImg from '../../assets/demo.jpg';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function PublicRooms() {
+    const { theme, toggleTheme } = useTheme();
     const [filterBuilding, setFilterBuilding] = useState<number | 'ALL'>('ALL');
     const [filterType, setFilterType] = useState<number | 'ALL'>('ALL');
     const [filterStatus, setFilterStatus] = useState<'ALL' | 'AVAILABLE'>('AVAILABLE');
@@ -27,18 +30,31 @@ export default function PublicRooms() {
     });
 
     return (
-        <div className="min-h-screen bg-neutral-900 text-neutral-100 font-sans selection:bg-yellow-500/30 pb-20">
+        <div className={`min-h-screen font-sans selection:bg-yellow-500/30 pb-20 transition-colors duration-300 ${theme === 'dark' ? 'bg-neutral-900 text-neutral-100' : 'bg-neutral-50 text-neutral-900'
+            }`}>
             {/* Minimal Header */}
-            <nav className="fixed top-0 w-full z-50 bg-neutral-900/80 backdrop-blur-md border-b border-white/10">
+            <nav className={`fixed top-0 w-full z-50 backdrop-blur-md border-b transition-colors duration-300 ${theme === 'dark' ? 'bg-neutral-900/80 border-white/10' : 'bg-white/80 border-black/10'
+                }`}>
                 <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-                    <a href="/" className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors">
+                    <a href="/" className={`flex items-center gap-2 transition-colors ${theme === 'dark' ? 'text-neutral-400 hover:text-white' : 'text-neutral-500 hover:text-neutral-900'
+                        }`}>
                         <ArrowLeft size={20} />
                         <span className="font-medium">Về trang chủ</span>
                     </a>
-                    <div className="text-xl font-bold tracking-tighter text-white">
+                    <div className="text-xl font-bold tracking-tighter">
                         QL<span className="text-[#D4AF37]">KTX</span>
                     </div>
-                    <div className="w-[100px]"></div> {/* Cân bằng flex */}
+                    <div className="w-[100px] flex justify-end">
+                        {/* Theme Toggle Button */}
+                        <button
+                            onClick={toggleTheme}
+                            className={`p-2 rounded-full transition-colors ${theme === 'dark' ? 'hover:bg-neutral-800 text-yellow-400' : 'hover:bg-neutral-200 text-slate-700'
+                                }`}
+                            aria-label="Toggle Theme"
+                        >
+                            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+                        </button>
+                    </div>
                 </div>
             </nav>
 
@@ -47,19 +63,22 @@ export default function PublicRooms() {
                     <h1 className="text-4xl md:text-5xl font-bold mb-4">
                         Danh sách <span className="text-[#D4AF37]">Phòng trọ</span>
                     </h1>
-                    <p className="text-neutral-400 max-w-2xl text-lg">
+                    <p className={`max-w-2xl text-lg transition-colors ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'
+                        }`}>
                         Khám phá các không gian sống tiện nghi, an ninh và hiện đại trong hệ thống của chúng tôi.
                     </p>
                 </div>
 
                 {/* Filters */}
-                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-12 backdrop-blur-sm">
+                <div className={`border rounded-2xl p-6 mb-12 backdrop-blur-sm transition-colors ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white/80 border-neutral-200 shadow-sm'
+                    }`}>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {/* Khu vực */}
                         <div>
-                            <label className="block text-sm font-medium text-neutral-400 mb-2">Cơ sở / Tòa nhà</label>
+                            <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'}`}>Cơ sở / Tòa nhà</label>
                             <select
-                                className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 text-white focus:ring-1 focus:ring-[#D4AF37] focus:border-[#D4AF37] outline-none transition-all appearance-none"
+                                className={`w-full rounded-lg px-4 py-3 focus:ring-1 focus:ring-[#D4AF37] focus:border-[#D4AF37] outline-none transition-all appearance-none ${theme === 'dark' ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-neutral-300 text-neutral-900'
+                                    }`}
                                 value={filterBuilding}
                                 onChange={(e) => setFilterBuilding(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
                             >
@@ -72,9 +91,10 @@ export default function PublicRooms() {
 
                         {/* Loại phòng */}
                         <div>
-                            <label className="block text-sm font-medium text-neutral-400 mb-2">Loại phòng</label>
+                            <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'}`}>Loại phòng</label>
                             <select
-                                className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 text-white focus:ring-1 focus:ring-[#D4AF37] focus:border-[#D4AF37] outline-none transition-all appearance-none"
+                                className={`w-full rounded-lg px-4 py-3 focus:ring-1 focus:ring-[#D4AF37] focus:border-[#D4AF37] outline-none transition-all appearance-none ${theme === 'dark' ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-neutral-300 text-neutral-900'
+                                    }`}
                                 value={filterType}
                                 onChange={(e) => setFilterType(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
                             >
@@ -87,9 +107,10 @@ export default function PublicRooms() {
 
                         {/* Mức giá */}
                         <div>
-                            <label className="block text-sm font-medium text-neutral-400 mb-2">Mức giá</label>
+                            <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'}`}>Mức giá</label>
                             <select
-                                className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 text-white focus:ring-1 focus:ring-[#D4AF37] focus:border-[#D4AF37] outline-none transition-all appearance-none"
+                                className={`w-full rounded-lg px-4 py-3 focus:ring-1 focus:ring-[#D4AF37] focus:border-[#D4AF37] outline-none transition-all appearance-none ${theme === 'dark' ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-neutral-300 text-neutral-900'
+                                    }`}
                                 value={filterPrice}
                                 onChange={(e) => setFilterPrice(e.target.value as any)}
                             >
@@ -102,9 +123,10 @@ export default function PublicRooms() {
 
                         {/* Trạng thái */}
                         <div>
-                            <label className="block text-sm font-medium text-neutral-400 mb-2">Trạng thái</label>
+                            <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'}`}>Trạng thái</label>
                             <select
-                                className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 py-3 text-white focus:ring-1 focus:ring-[#D4AF37] focus:border-[#D4AF37] outline-none transition-all appearance-none"
+                                className={`w-full rounded-lg px-4 py-3 focus:ring-1 focus:ring-[#D4AF37] focus:border-[#D4AF37] outline-none transition-all appearance-none ${theme === 'dark' ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-neutral-300 text-neutral-900'
+                                    }`}
                                 value={filterStatus}
                                 onChange={(e) => setFilterStatus(e.target.value as any)}
                             >
@@ -119,16 +141,17 @@ export default function PublicRooms() {
                 {filteredRooms.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {filteredRooms.map(room => (
-                            <RoomCard key={room.roomId} room={room} />
+                            <RoomCard key={room.roomId} room={room} theme={theme} />
                         ))}
                     </div>
                 ) : (
-                    <div className="text-center py-20 bg-white/5 border border-white/10 rounded-2xl">
-                        <div className="text-neutral-500 mb-4">
+                    <div className={`text-center py-20 border rounded-2xl ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-neutral-200'
+                        }`}>
+                        <div className={`mb-4 ${theme === 'dark' ? 'text-neutral-500' : 'text-neutral-400'}`}>
                             <Home size={48} className="mx-auto opacity-50" />
                         </div>
-                        <h3 className="text-xl font-medium text-white mb-2">Không tìm thấy phòng phù hợp</h3>
-                        <p className="text-neutral-400">Vui lòng thử thay đổi các tiêu chí tìm kiếm của bạn.</p>
+                        <h3 className={`text-xl font-medium mb-2 ${theme === 'dark' ? 'text-white' : 'text-neutral-900'}`}>Không tìm thấy phòng phù hợp</h3>
+                        <p className={theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}>Vui lòng thử thay đổi các tiêu chí tìm kiếm của bạn.</p>
                         <button
                             onClick={() => {
                                 setFilterBuilding('ALL');
@@ -147,7 +170,7 @@ export default function PublicRooms() {
     );
 }
 
-function RoomCard({ room }: { room: Room }) {
+function RoomCard({ room, theme }: { room: Room, theme: string }) {
     const isAvailable = room.currentStatus === 'AVAILABLE';
     const isMaintenance = room.currentStatus === 'MAINTENANCE';
 
@@ -155,8 +178,12 @@ function RoomCard({ room }: { room: Room }) {
         <div className="group bg-neutral-800/50 border border-neutral-700/50 rounded-2xl overflow-hidden hover:border-[#D4AF37]/50 transition-all hover:shadow-[0_8px_30px_rgba(212,175,55,0.15)] flex flex-col">
             {/* Image Placeholder */}
             <div className="h-48 bg-neutral-800 relative overflow-hidden">
-                {/* Randomly generated abstract pattern for placeholder */}
-                <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-neutral-500 via-neutral-800 to-neutral-900 group-hover:scale-110 transition-transform duration-700"></div>
+                <img
+                    src={demoImg}
+                    alt={`Phòng ${room.roomNumber}`}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-neutral-900/80 to-transparent"></div>
 
                 {/* Status Badge */}
                 <div className="absolute top-4 right-4 z-10">
@@ -171,7 +198,7 @@ function RoomCard({ room }: { room: Room }) {
                 </div>
 
                 <div className="absolute bottom-4 left-4 z-10">
-                    <div className="bg-neutral-900/80 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/10 text-white font-bold tracking-wider">
+                    <div className="bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/20 text-white font-bold tracking-wider">
                         Phòng {room.roomNumber}
                     </div>
                 </div>
@@ -182,38 +209,38 @@ function RoomCard({ room }: { room: Room }) {
                 <div className="flex justify-between items-start mb-4">
                     <div>
                         <h3 className="text-xl font-bold text-[#D4AF37] mb-1">{room.roomType.typeName}</h3>
-                        <p className="text-sm text-neutral-400 flex items-center gap-1.5">
+                        <p className={`text-sm flex items-center gap-1.5 ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>
                             <MapPin size={14} />
                             {room.floor.building.buildingName} - {room.floor.floorName}
                         </p>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-sm text-neutral-300 mb-6 flex-1">
+                <div className={`grid grid-cols-2 gap-y-4 gap-x-2 text-sm mb-6 flex-1 ${theme === 'dark' ? 'text-neutral-300' : 'text-neutral-600'}`}>
                     <div className="flex items-center gap-2">
-                        <Maximize className="text-neutral-500" size={16} />
+                        <Maximize className={theme === 'dark' ? 'text-neutral-500' : 'text-neutral-400'} size={16} />
                         <span>{room.roomType.area} m²</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Users className="text-neutral-500" size={16} />
+                        <Users className={theme === 'dark' ? 'text-neutral-500' : 'text-neutral-400'} size={16} />
                         <span>Tối đa {room.roomType.maxOccupancy} người</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Shield className="text-neutral-500" size={16} />
+                        <Shield className={theme === 'dark' ? 'text-neutral-500' : 'text-neutral-400'} size={16} />
                         <span>An ninh 24/7</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Wifi className="text-neutral-500" size={16} />
+                        <Wifi className={theme === 'dark' ? 'text-neutral-500' : 'text-neutral-400'} size={16} />
                         <span>Wifi Miễn phí</span>
                     </div>
                 </div>
 
-                <div className="pt-4 border-t border-neutral-700/50 flex items-end justify-between mt-auto">
+                <div className={`pt-4 border-t flex items-end justify-between mt-auto ${theme === 'dark' ? 'border-neutral-700/50' : 'border-neutral-200'}`}>
                     <div>
-                        <p className="text-xs text-neutral-400 mb-1">Giá thuê từ</p>
-                        <div className="text-2xl font-bold text-white">
+                        <p className={`text-xs mb-1 ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>Giá thuê từ</p>
+                        <div className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-neutral-900'}`}>
                             {new Intl.NumberFormat('vi-VN').format(room.roomType.basePrice)}
-                            <span className="text-sm font-normal text-neutral-400 ml-1">đ/tháng</span>
+                            <span className={`text-sm font-normal ml-1 ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>đ/tháng</span>
                         </div>
                     </div>
 
@@ -222,7 +249,8 @@ function RoomCard({ room }: { room: Room }) {
                             Xem chi tiết
                         </Link>
                     ) : (
-                        <button className="px-5 py-2.5 rounded-xl font-medium transition-all bg-neutral-800 text-neutral-400 cursor-not-allowed border border-neutral-700 min-w-[150px]" disabled>
+                        <button className={`px-5 py-2.5 rounded-xl font-medium transition-all cursor-not-allowed border min-w-[150px] ${theme === 'dark' ? 'bg-neutral-800 text-neutral-400 border-neutral-700' : 'bg-neutral-100 text-neutral-400 border-neutral-200'
+                            }`} disabled>
                             Hết phòng
                         </button>
                     )}

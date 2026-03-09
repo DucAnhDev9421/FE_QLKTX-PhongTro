@@ -5,6 +5,7 @@ import LandingPage from './pages/landing';
 import Dashboard from './pages/dashboard';
 import Rooms from './pages/rooms';
 import PublicRooms from './pages/public/rooms';
+import RoomDetail from './pages/public/room-detail';
 import Tenants from './pages/tenants';
 import Contracts from './pages/contracts';
 import Payments from './pages/payments';
@@ -24,6 +25,7 @@ function App() {
                     <Routes>
                         <Route path="/" element={<LandingPage />} />
                         <Route path="/phong-tro" element={<PublicRooms />} />
+                        <Route path="/phong-tro/:id" element={<RoomDetail />} />
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/rooms" element={<Rooms />} />
                         <Route path="/tenants" element={<Tenants />} />

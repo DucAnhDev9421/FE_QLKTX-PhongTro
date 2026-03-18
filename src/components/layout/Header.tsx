@@ -1,6 +1,7 @@
 import React from 'react';
 import { Bell, Search, Menu, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { Link } from 'react-router-dom';
 
 export const Header = () => {
     const { theme, toggleTheme } = useTheme();
@@ -28,19 +29,76 @@ export const Header = () => {
                 >
                     {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
                 </button>
-                <button className="relative text-slate-400 hover:text-slate-50 transition-colors p-2">
-                    <Bell size={20} />
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border border-slate-900"></span>
-                </button>
-                <div className="flex items-center gap-3 pl-4 border-l border-slate-800">
-                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center font-bold text-sm">
+                <div className="relative group">
+                    <button className="relative text-slate-400 hover:text-slate-50 transition-colors p-2">
+                        <Bell size={20} />
+                        <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border border-slate-900"></span>
+                    </button>
+
+                    {/* Dropdown Panel Container (includes invisible pt-3 padding for safe hover bridging) */}
+                    <div className="absolute right-[-10px] top-full pt-3 w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 transform origin-top-right scale-95 group-hover:scale-100">
+                        <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden relative">
+                            {/* Decorative Arrow pointing up */}
+                            <div className="absolute -top-[5px] right-[18px] w-2.5 h-2.5 bg-slate-800 border-l border-t border-slate-700 transform rotate-45 z-0"></div>
+                            
+                            <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800 relative z-10">
+                                <h3 className="font-semibold text-slate-200">Thông báo mới</h3>
+                                <button className="text-[11px] text-emerald-500 hover:text-emerald-400 font-medium transition-colors bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">Đánh dấu đã đọc</button>
+                            </div>
+                            
+                            <div className="max-h-[320px] overflow-y-auto relative z-10 custom-scrollbar" style={{ scrollbarWidth: 'thin' }}>
+                                {/* Unread Item 1 */}
+                                <div className="p-4 border-b border-slate-700/50 hover:bg-slate-700/40 bg-slate-800/40 transition-colors cursor-pointer flex gap-3 relative">
+                                    <div className="w-9 h-9 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0 mt-0.5">
+                                        <Bell size={16} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-100 mb-0.5">Sắp hết hạn hợp đồng</p>
+                                        <p className="text-[13px] text-slate-400 leading-snug">Phòng 101 chỉ còn 5 ngày nữa là đến hạn 30/06.</p>
+                                        <p className="text-[11px] text-slate-500 mt-2 font-medium">2 giờ trước</p>
+                                    </div>
+                                </div>
+                                
+                                {/* Unread Item 2 */}
+                                <div className="p-4 border-b border-slate-700/50 hover:bg-slate-700/40 bg-slate-800/40 transition-colors cursor-pointer flex gap-3 relative">
+                                    <div className="w-9 h-9 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0 mt-0.5">
+                                        <Bell size={16} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-100 mb-0.5">Chậm thanh toán</p>
+                                        <p className="text-[13px] text-slate-400 leading-snug">Phòng 205 trễ hạn thanh toán tháng 6.</p>
+                                        <p className="text-[11px] text-slate-500 mt-2 font-medium">Hôm qua</p>
+                                    </div>
+                                </div>
+
+                                {/* Read Item */}
+                                <div className="p-4 hover:bg-slate-700/40 transition-colors cursor-pointer flex gap-3">
+                                    <div className="w-9 h-9 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0 mt-0.5">
+                                        <Bell size={16} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-medium text-slate-300 mb-0.5">Sao lưu hệ thống</p>
+                                        <p className="text-[13px] text-slate-500 leading-snug">Đã hoàn thành sao lưu CSDL lúc 02:00 AM.</p>
+                                        <p className="text-[11px] text-slate-500/70 mt-2">2 ngày trước</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="p-3 border-t border-slate-700 text-center bg-slate-800 relative z-10 transition-colors hover:bg-slate-700/70 cursor-pointer">
+                                <span className="text-sm font-medium text-slate-300">Xem tất cả thông báo</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <Link to="/profile" className="flex items-center gap-3 pl-4 ml-2 border-l border-slate-800 hover:opacity-80 transition-opacity cursor-pointer">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center font-bold text-sm border border-emerald-500/30">
                         AD
                     </div>
                     <div className="hidden text-sm sm:block">
                         <div className="font-medium text-slate-200">Admin User</div>
                         <div className="text-slate-500 text-xs">Quản trị viên</div>
                     </div>
-                </div>
+                </Link>
             </div>
         </header>
     );

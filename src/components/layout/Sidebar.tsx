@@ -1,4 +1,4 @@
-import { Home, Users, DollarSign, Activity, FileText, Settings, LogOut } from 'lucide-react';
+import { Home, Users, DollarSign, Activity, FileText, Settings, LogOut, Building, Receipt, Zap, LayoutList, UserCog } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
 export const Sidebar = () => {
@@ -17,6 +17,10 @@ export const Sidebar = () => {
           <Activity size={20} /> <span className="font-medium">Tổng quan</span>
         </NavLink>
 
+        <NavLink to="/buildings" className={({ isActive }) => isActive ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-emerald-500/10 text-emerald-500' : 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-800 hover:text-50'}>
+          <Building size={20} /> <span className="font-medium">Tòa nhà</span>
+        </NavLink>
+
         <NavLink to="/rooms" className={({ isActive }) => isActive ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-emerald-500/10 text-emerald-500' : 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-800 hover:text-50'}>
           <Home size={20} /> <span className="font-medium">Phòng trọ</span>
         </NavLink>
@@ -25,11 +29,19 @@ export const Sidebar = () => {
           <Users size={20} /> <span className="font-medium">Người thuê</span>
         </NavLink>
 
+        <NavLink to="/meter-readings" className={({ isActive }) => isActive ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-emerald-500/10 text-emerald-500' : 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-800 hover:text-50'}>
+          <Zap size={20} /> <span className="font-medium">Ghi chỉ số</span>
+        </NavLink>
+
         <NavLink to="/contracts" className={({ isActive }) => isActive ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-emerald-500/10 text-emerald-500' : 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-800 hover:text-50'}>
           <FileText size={20} /> <span className="font-medium">Hợp đồng</span>
         </NavLink>
 
         <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-8 mb-4 px-2">Tài chính</div>
+
+        <NavLink to="/invoices" className={({ isActive }) => isActive ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-emerald-500/10 text-emerald-500' : 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-800 hover:text-50'}>
+          <Receipt size={20} /> <span className="font-medium">Hóa đơn</span>
+        </NavLink>
 
         <NavLink to="/payments" className={({ isActive }) => isActive ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-emerald-500/10 text-emerald-500' : 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-800 hover:text-50'}>
           <DollarSign size={20} /> <span className="font-medium">Thanh toán</span>
@@ -40,6 +52,14 @@ export const Sidebar = () => {
         </NavLink>
 
         <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-8 mb-4 px-2">Hệ thống</div>
+
+        <NavLink to="/users" className={({ isActive }) => isActive ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-emerald-500/10 text-emerald-500' : 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-800 hover:text-50'}>
+          <UserCog size={20} /> <span className="font-medium">Nhân viên</span>
+        </NavLink>
+
+        <NavLink to="/services" className={({ isActive }) => isActive ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-emerald-500/10 text-emerald-500' : 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-800 hover:text-50'}>
+          <LayoutList size={20} /> <span className="font-medium">Dịch vụ</span>
+        </NavLink>
 
         <NavLink to="/settings" className={({ isActive }) => isActive ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-emerald-500/10 text-emerald-500' : 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-800 hover:text-50'}>
           <Settings size={20} /> <span className="font-medium">Cài đặt</span>

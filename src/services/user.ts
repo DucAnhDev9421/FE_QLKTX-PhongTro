@@ -1,0 +1,32 @@
+import axios from 'axios';
+
+const api = axios.create({
+    baseURL: import.meta.env?.VITE_API_URL || 'http://localhost:8080/api',
+});
+
+api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
+export const userService = {
+    getUsers: async (role?: string) => {
+        const response = await api.get('/v1/users', { params: { role } });
+        return response.data;
+    },
+    createUser: async (data: any) => {
+        const response = await api.post('/v1/users', data);
+        return response.data;
+    },
+    updateUserStatus: async (id: number | string, isActive: boolean) => {
+        const response = await api.put(`/v1/users/${id}/status?isActive=${isActive}`);
+        return response.data;
+    },
+    deleteUser: async (id: number | string) => {
+        const response = await api.delete(`/v1/users/${id}`);
+        return response.data;
+    }
+};

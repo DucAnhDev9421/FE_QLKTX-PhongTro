@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Layout } from '../../components/layout';
-import { Search, Filter, Plus, Building, MapPin, Edit, Trash2, Layers, UserCog, Loader2 } from 'lucide-react';
+import { Search, Filter, Plus, Building, MapPin, Edit, Trash2, Layers, UserCog, Loader2, ListTree } from 'lucide-react';
 import BuildingModal from './components/BuildingModal';
+import FloorManagementModal from './components/FloorManagementModal';
 import { buildingService } from '../../services/building';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 
@@ -10,6 +11,7 @@ export default function Buildings() {
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedBuilding, setSelectedBuilding] = useState<any | null>(null);
+    const [managingFloorsBuilding, setManagingFloorsBuilding] = useState<any | null>(null);
     const queryClient = useQueryClient();
 
     const [confirmDialog, setConfirmDialog] = useState<{isOpen: boolean, config: any}>({
@@ -157,13 +159,20 @@ export default function Buildings() {
 
                                 <div className="flex gap-2 mt-auto">
                                     <button 
+                                        onClick={() => setManagingFloorsBuilding(building)}
+                                        className="flex-1 bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white rounded-xl py-2.5 text-sm font-semibold transition-all border border-blue-500/20 flex justify-center items-center gap-2 group/floor">
+                                        <ListTree size={16} className="group-hover/floor:scale-110 transition-transform" /> Xem tầng
+                                    </button>
+                                    <button 
                                         onClick={() => handleEdit(building)}
-                                        className="flex-1 bg-white/5 hover:bg-emerald-500 hover:text-emerald-950 hover:border-emerald-400 text-slate-300 rounded-xl py-2.5 text-sm font-semibold transition-all border border-white/10 flex justify-center items-center gap-2 group/edit">
-                                        <Edit size={16} className="group-hover/edit:scale-110 transition-transform" /> Chỉnh sửa
+                                        title="Chỉnh sửa thông tin"
+                                        className="w-12 shrink-0 bg-white/5 hover:bg-emerald-500 hover:text-emerald-950 text-slate-300 rounded-xl py-2.5 transition-all border border-white/10 hover:border-emerald-400 flex justify-center items-center">
+                                        <Edit size={16} />
                                     </button>
                                     <button 
                                         onClick={() => handleDelete(building.buildingId, building.buildingName)}
                                         disabled={deleteMutation.isPending && confirmDialog.config?.onConfirm}
+                                        title="Xóa cơ sở"
                                         className="w-12 shrink-0 bg-white/5 hover:bg-rose-500 text-slate-400 hover:text-white rounded-xl flex justify-center items-center transition-all border border-white/10 hover:border-rose-400 disabled:opacity-50">
                                         {deleteMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                                     </button>
@@ -178,6 +187,13 @@ export default function Buildings() {
                 <BuildingModal 
                     building={selectedBuilding} 
                     onClose={() => setIsModalOpen(false)} 
+                />
+            )}
+
+            {managingFloorsBuilding && (
+                <FloorManagementModal 
+                    building={managingFloorsBuilding}
+                    onClose={() => setManagingFloorsBuilding(null)}
                 />
             )}
 

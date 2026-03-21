@@ -1,5 +1,5 @@
-export * from './Badge';
-export * from './Modal';
-export * from './Pagination';
-export * from './StatCard';
-export * from './FilterBar';
+export { default as ConfirmModal } from './ConfirmModal';
+export type { ConfirmType } from './ConfirmModal';
+
+export { default as Alert } from './Alert';
+export type { AlertType } from './Alert';

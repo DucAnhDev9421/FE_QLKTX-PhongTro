@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Loader2, AlertCircle, Building, MapPin, Layers, UserCog } from 'lucide-react';
+import { X, Loader2, Building, MapPin, Layers, UserCog } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { buildingService } from '../../../services/building';
 import { userService } from '../../../services/user';
+import Alert from '../../../components/ui/Alert';
 
 interface Props {
     building: any | null;
@@ -39,9 +40,36 @@ export default function BuildingModal({ building, onClose }: Props) {
     );
 
     const mutation = useMutation({
-        mutationFn: (data: any) => isEdit 
-            ? buildingService.updateBuilding(building.buildingId, data)
-            : buildingService.createBuilding(data),
+        mutationFn: async (data: any) => {
+            if (isEdit) {
+                return buildingService.updateBuilding(building.buildingId, data);
+            } else {
+                const bRes = await buildingService.createBuilding(data);
+                const buildingId = bRes.result?.buildingId;
+                const totalFloors = Number(data.totalFloors) || 0;
+
+                // Auto create floors if totalFloors is set
+                if (buildingId && totalFloors > 0) {
+                    const floorPromises = [];
+                    for (let i = 1; i <= totalFloors; i++) {
+                        floorPromises.push(
+                            buildingService.createFloor({
+                                buildingId,
+                                floorName: `Tầng ${i}`
+                            })
+                        );
+                    }
+                    try {
+                        await Promise.all(floorPromises);
+                    } catch (e) {
+                        console.error("Failed to auto-create some floors", e);
+                        // We still return bRes because building was created successfully
+                    }
+                }
+                
+                return bRes;
+            }
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['buildings'] });
             onClose();
@@ -94,10 +122,7 @@ export default function BuildingModal({ building, onClose }: Props) {
 
                 <div className="p-5 overflow-y-auto space-y-5">
                     {errorMsg && (
-                        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 px-4 py-3 rounded-xl flex items-center gap-3 text-sm">
-                            <AlertCircle size={18} className="shrink-0" />
-                            <p>{errorMsg}</p>
-                        </div>
+                        <Alert type="error" message={errorMsg} />
                     )}
 
                     <div className="space-y-4 text-left">

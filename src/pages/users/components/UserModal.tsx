@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ShieldCheck, KeyRound, Loader2, AlertCircle } from 'lucide-react';
+import { X, ShieldCheck, KeyRound, Loader2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { userService } from '../../../services/user';
+import Alert from '../../../components/ui/Alert';
 
 interface Props {
     user: any;
@@ -81,16 +82,11 @@ export default function UserModal({ user, onClose }: Props) {
 
                 <div className="p-5 overflow-y-auto space-y-6">
                     {errorMsg && (
-                        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 px-4 py-3 rounded-xl flex items-center gap-3 text-sm">
-                            <AlertCircle size={18} className="shrink-0" />
-                            <p>{errorMsg}</p>
-                        </div>
+                        <Alert type="error" message={errorMsg} />
                     )}
 
                     {isEdit && (
-                        <div className="bg-blue-500/10 border border-blue-500/20 text-blue-400 px-4 py-3 rounded-xl text-sm flex items-center justify-between">
-                            <span>Chức năng sửa thông tin hiện đang ở dạng xem trước.</span>
-                        </div>
+                        <Alert type="info" message="Chức năng sửa thông tin hiện đang ở dạng xem trước." />
                     )}
 
                     {/* Basic Info */}

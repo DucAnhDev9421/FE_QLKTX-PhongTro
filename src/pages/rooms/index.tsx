@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Layout } from '../../components/layout';
-import { Search, Filter, Plus, Home, Users, CheckCircle2, AlertCircle, Clock, Loader2, Edit } from 'lucide-react';
+import { Search, Plus, Home, Users, CheckCircle2, Clock, Loader2, Edit, ImagePlus, Camera } from 'lucide-react';
 import { roomService } from '../../services/room';
 import { buildingService } from '../../services/building';
 import RoomModal from './components/RoomModal';
+import ImageUploadModal from './components/ImageUploadModal';
 
 export default function Rooms() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -14,6 +15,7 @@ export default function Rooms() {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedRoom, setSelectedRoom] = useState<any | null>(null);
+    const [imageModalRoom, setImageModalRoom] = useState<any | null>(null);
 
     const queryClient = useQueryClient();
 
@@ -30,7 +32,14 @@ export default function Rooms() {
         queryFn: () => buildingService.getFloorsByBuilding(filterBuildingId as number),
         enabled: !!filterBuildingId
     });
-    const floors = floorsData?.result || [];
+    const rawFloors = floorsData?.result || [];
+
+    // Sort floors numerically
+    const floors = [...rawFloors].sort((a: any, b: any) => {
+        const numA = parseInt(a.floorName.replace(/\D/g, '')) || 0;
+        const numB = parseInt(b.floorName.replace(/\D/g, '')) || 0;
+        return numA - numB;
+    });
 
     // Fetch Rooms
     const { data: roomsData, isLoading } = useQuery({
@@ -41,7 +50,6 @@ export default function Rooms() {
         })
     });
     
-    // Fallback if data array is nested inside result
     const rooms = roomsData?.result || [];
 
     const handleCreate = () => {
@@ -54,7 +62,7 @@ export default function Rooms() {
         setIsModalOpen(true);
     };
 
-    // Fast-Patch Mutation for changing status directly from Card (Optional)
+    // Fast-Patch Mutation for changing status directly from Card
     const statusMutation = useMutation({
         mutationFn: ({ id, status }: { id: number, status: string }) => roomService.updateRoomStatus(id, status),
         onSuccess: () => {
@@ -89,7 +97,7 @@ export default function Rooms() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
                     <input
                         type="text"
-                        placeholder="Thanh tìm kiếm theo mã phòng, tên cơ sở..."
+                        placeholder="Tìm kiếm theo mã phòng, cơ sở..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full bg-slate-800 border border-slate-700 text-sm text-white rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-all placeholder:text-slate-500"
@@ -102,7 +110,7 @@ export default function Rooms() {
                         value={filterBuildingId}
                         onChange={(e) => {
                             setFilterBuildingId(e.target.value ? Number(e.target.value) : '');
-                            setFilterFloorId(''); // reset floor
+                            setFilterFloorId('');
                         }}
                     >
                         <option value="">Tất cả Cơ sở</option>
@@ -129,6 +137,7 @@ export default function Rooms() {
                     <FilterButton active={filterStatus === 'AVAILABLE'} onClick={() => setFilterStatus('AVAILABLE')}>Trống</FilterButton>
                     <FilterButton active={filterStatus === 'OCCUPIED'} onClick={() => setFilterStatus('OCCUPIED')}>Đang thuê</FilterButton>
                     <FilterButton active={filterStatus === 'MAINTENANCE'} onClick={() => setFilterStatus('MAINTENANCE')}>Bảo trì</FilterButton>
+                    <FilterButton active={filterStatus === 'BOOKED'} onClick={() => setFilterStatus('BOOKED')}>Đã cọc</FilterButton>
                 </div>
             </div>
 
@@ -151,6 +160,7 @@ export default function Rooms() {
                             room={room} 
                             onEdit={() => handleEdit(room)}
                             onChangeStatus={(status) => statusMutation.mutate({ id: room.roomId, status })}
+                            onOpenImages={() => setImageModalRoom(room)}
                         />
                     ))}
                 </div>
@@ -160,6 +170,13 @@ export default function Rooms() {
                 <RoomModal 
                     room={selectedRoom}
                     onClose={() => setIsModalOpen(false)}
+                />
+            )}
+
+            {imageModalRoom && (
+                <ImageUploadModal
+                    room={imageModalRoom}
+                    onClose={() => setImageModalRoom(null)}
                 />
             )}
         </Layout>
@@ -180,10 +197,12 @@ function FilterButton({ active, onClick, children }: { active: boolean, onClick:
     );
 }
 
-function RoomCard({ room, onEdit, onChangeStatus }: { room: any, onEdit: () => void, onChangeStatus: (status: string) => void }) {
+function RoomCard({ room, onEdit, onChangeStatus, onOpenImages }: { room: any, onEdit: () => void, onChangeStatus: (status: string) => void, onOpenImages: () => void }) {
     const isAvailable = room.currentStatus === 'AVAILABLE';
     const isMaintenance = room.currentStatus === 'MAINTENANCE';
-    const isOccupied = room.currentStatus === 'OCCUPIED';
+    const isBooked = room.currentStatus === 'BOOKED';
+
+    const hasImages = room.imageUrls && room.imageUrls.length > 0;
 
     const getStatusText = (status: string) => {
         switch(status) {
@@ -195,38 +214,70 @@ function RoomCard({ room, onEdit, onChangeStatus }: { room: any, onEdit: () => v
         }
     };
 
+    const statusBadgeClasses: Record<string, string> = {
+        'AVAILABLE': 'bg-emerald-500/20 text-emerald-500 border-emerald-500/30',
+        'OCCUPIED': 'bg-blue-500/20 text-blue-500 border-blue-500/30',
+        'MAINTENANCE': 'bg-amber-500/20 text-amber-500 border-amber-500/30',
+        'BOOKED': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+    };
+
+    const statusIconColor: Record<string, string> = {
+        'AVAILABLE': 'text-emerald-500',
+        'OCCUPIED': 'text-blue-500',
+        'MAINTENANCE': 'text-amber-500',
+        'BOOKED': 'text-purple-500',
+    };
+
+    const statusBarColor: Record<string, string> = {
+        'AVAILABLE': 'bg-emerald-500',
+        'OCCUPIED': 'bg-blue-500',
+        'MAINTENANCE': 'bg-amber-500',
+        'BOOKED': 'bg-purple-500',
+    };
+
     return (
         <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden hover:border-slate-700 transition-all hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] group relative flex flex-col h-full">
-            <div className="p-5 flex-1">
-                <div className="flex justify-between items-start mb-4">
+            {/* Image Thumbnail */}
+            <div className="relative h-36 overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900">
+                {hasImages ? (
+                    <img 
+                        src={room.imageUrls[0]} 
+                        alt={room.roomNumber} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                    />
+                ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-600">
+                        <Home size={32} className="mb-1" />
+                        <span className="text-xs">Chưa có ảnh</span>
+                    </div>
+                )}
+                {/* Image Count Badge */}
+                {hasImages && (
+                    <span className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-1 backdrop-blur-sm">
+                        <Camera size={10} /> {room.imageUrls.length}
+                    </span>
+                )}
+                {/* Status Badge over image */}
+                <span className={`absolute top-2 right-2 text-xs font-medium px-2.5 py-1 rounded-full border backdrop-blur-sm ${statusBadgeClasses[room.currentStatus] || statusBadgeClasses['AVAILABLE']}`}>
+                    {getStatusText(room.currentStatus)}
+                </span>
+            </div>
+
+            <div className="p-4 flex-1">
+                <div className="flex justify-between items-start mb-3">
                     <div>
-                        <div className="text-xs text-slate-500 font-medium mb-1">{room.buildingName} - {room.floorName}</div>
-                        <h3 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-                            <Home size={18} className={`${isAvailable ? 'text-emerald-500' : isOccupied ? 'text-blue-500' : 'text-amber-500'} group-hover:scale-110 transition-transform`} />
+                        <div className="text-xs text-slate-500 font-medium mb-0.5">{room.buildingName} • {room.floorName}</div>
+                        <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                            <Home size={16} className={statusIconColor[room.currentStatus] || 'text-emerald-500'} />
                             {room.roomNumber}
                         </h3>
                     </div>
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${
-                            isAvailable ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                            : isMaintenance ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                            : isOccupied ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-                            : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-                        }`}>
-                        {getStatusText(room.currentStatus)}
-                    </span>
                 </div>
 
-                <div className="space-y-3 mb-5">
+                <div className="space-y-2 mb-4">
                     <div className="flex justify-between items-center text-sm">
                         <span className="text-slate-400">Loại phòng:</span>
-                        <span className="text-slate-100 font-medium truncate max-w-[120px]" title={room.roomTypeName}>{room.roomTypeName}</span>
-                    </div>
-                    {/* Feature: Max capacity (API current doesn't return maxOccupancy inside RoomResponse unless we join it. So we hide or fake it if not available) */}
-                    <div className="flex justify-between items-center text-sm">
-                        <span className="text-slate-400">Trạng thái HĐ:</span>
-                        <span className="text-slate-100 flex items-center gap-1.5 text-xs">
-                           {isAvailable ? 'Không có' : 'Có hiệu lực'}
-                        </span>
+                        <span className="text-slate-200 font-medium truncate max-w-[120px]" title={room.roomTypeName}>{room.roomTypeName}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                         <span className="text-slate-400">Giá thuê:</span>
@@ -241,28 +292,42 @@ function RoomCard({ room, onEdit, onChangeStatus }: { room: any, onEdit: () => v
             <div className="p-4 pt-0 mt-auto flex gap-2">
                 <button 
                     onClick={onEdit}
-                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg py-2 text-sm font-medium transition-colors flex justify-center items-center gap-2 border border-slate-700"
+                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg py-2 text-sm font-medium transition-colors flex justify-center items-center gap-1.5 border border-slate-700"
                 >
-                    <Edit size={16} /> Sửa
+                    <Edit size={14} /> Sửa
+                </button>
+                <button 
+                    onClick={onOpenImages}
+                    className="bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg py-2 px-3 text-sm font-medium transition-colors flex justify-center items-center gap-1.5 border border-slate-700"
+                    title="Quản lý ảnh phòng"
+                >
+                    <ImagePlus size={14} />
                 </button>
                 
                 {isAvailable ? (
                     <button 
                         onClick={() => onChangeStatus('MAINTENANCE')}
-                        className="flex-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 rounded-lg py-2 text-sm font-medium transition-colors flex justify-center items-center gap-2 border border-amber-500/20"
+                        className="flex-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 rounded-lg py-2 text-sm font-medium transition-colors flex justify-center items-center gap-1.5 border border-amber-500/20"
                     >
-                        <Clock size={16} /> Bảo trì
+                        <Clock size={14} /> Bảo trì
                     </button>
                 ) : isMaintenance ? (
                     <button 
                         onClick={() => onChangeStatus('AVAILABLE')}
-                        className="flex-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-lg py-2 text-sm font-medium transition-colors flex justify-center items-center gap-2 border border-emerald-500/20"
+                        className="flex-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-lg py-2 text-sm font-medium transition-colors flex justify-center items-center gap-1.5 border border-emerald-500/20"
                     >
-                        <CheckCircle2 size={16} /> Xong BT
+                        <CheckCircle2 size={14} /> Xong BT
+                    </button>
+                ) : isBooked ? (
+                    <button 
+                        onClick={() => onChangeStatus('AVAILABLE')}
+                        className="flex-1 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 rounded-lg py-2 text-sm font-medium transition-colors flex justify-center items-center gap-1.5 border border-purple-500/20"
+                    >
+                        <CheckCircle2 size={14} /> Hủy cọc
                     </button>
                 ) : (
-                    <button className="flex-1 bg-blue-500/10 text-blue-500 rounded-lg py-2 text-sm font-medium flex justify-center items-center gap-2 border border-blue-500/20 opacity-70 cursor-not-allowed" title="Đang có người thuê, không thể sửa trạng thái trực tiếp">
-                        <Users size={16} /> Đang ở
+                    <button className="flex-1 bg-blue-500/10 text-blue-500 rounded-lg py-2 text-sm font-medium flex justify-center items-center gap-1.5 border border-blue-500/20 opacity-70 cursor-not-allowed" title="Đang có người thuê">
+                        <Users size={14} /> Đang ở
                     </button>
                 )}
             </div>
@@ -270,8 +335,8 @@ function RoomCard({ room, onEdit, onChangeStatus }: { room: any, onEdit: () => v
             {/* Decorative Cap Bar */}
             <div className="absolute bottom-0 left-0 h-1 bg-slate-800 w-full">
                 <div
-                    className={`h-full transition-all duration-500 ${isOccupied ? 'bg-blue-500' : isAvailable ? 'bg-emerald-500' : 'bg-amber-500'}`}
-                    style={{ width: isOccupied ? '100%' : '100%' }}
+                    className={`h-full transition-all duration-500 ${statusBarColor[room.currentStatus] || 'bg-emerald-500'}`}
+                    style={{ width: '100%' }}
                 />
             </div>
         </div>

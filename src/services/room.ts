@@ -48,5 +48,14 @@ export const roomService = {
     updateRoomStatus: async (id: number | string, status: string) => {
         const response = await api.patch(`/v1/rooms/${id}/status`, { status });
         return response.data;
+    },
+
+    uploadRoomImages: async (roomId: number | string, files: File[]) => {
+        const formData = new FormData();
+        files.forEach(file => formData.append('images', file));
+        const response = await api.post(`/v1/rooms/${roomId}/images`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        return response.data;
     }
 };

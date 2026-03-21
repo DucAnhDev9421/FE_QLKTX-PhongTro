@@ -1,7 +1,39 @@
-import React from 'react';
-import { ArrowRight, Lock, Mail, User, Phone } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowRight, Lock, Mail, User, Phone, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { authService } from '../../services/auth';
 
 export default function Register() {
+    const navigate = useNavigate();
+    const [formData, setFormData] = useState({
+        username: '',
+        password: '',
+        fullName: '',
+        email: '',
+        phoneNumber: '',
+    });
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+        try {
+            await authService.register(formData);
+            alert('Đăng ký thành công! Vui lòng đăng nhập.');
+            navigate('/login');
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-neutral-900 flex items-center justify-center p-6 py-12 selection:bg-yellow-500/30">
             {/* Background elements */}
@@ -14,11 +46,35 @@ export default function Register() {
                         QL<span className="text-[#D4AF37]">KTX</span>
                     </div>
                     <h1 className="text-2xl font-semibold text-white mb-2">Tạo tài khoản mới</h1>
-                    <p className="text-neutral-400">Đăng ký để trải nghiệm dịch vụ của chúng tôi</p>
+                    <p className="text-neutral-400">Đăng ký để sử dụng hệ thống</p>
                 </div>
 
                 <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl">
-                    <form className="space-y-5">
+                    <form className="space-y-5" onSubmit={handleSubmit}>
+                        {error && (
+                            <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-xl flex items-center gap-2 text-sm">
+                                <AlertCircle size={16} />
+                                {error}
+                            </div>
+                        )}
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-300 mb-2">Tên đăng nhập</label>
+                            <div className="relative">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <User size={18} className="text-neutral-500" />
+                                </div>
+                                <input
+                                    type="text"
+                                    name="username"
+                                    value={formData.username}
+                                    onChange={handleChange}
+                                    required
+                                    className="w-full bg-neutral-900/50 border border-neutral-700 text-white rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all placeholder:text-neutral-600"
+                                    placeholder="Tên đăng nhập (username)"
+                                />
+                            </div>
+                        </div>
+
                         <div>
                             <label className="block text-sm font-medium text-neutral-300 mb-2">Họ và tên</label>
                             <div className="relative">
@@ -27,6 +83,10 @@ export default function Register() {
                                 </div>
                                 <input
                                     type="text"
+                                    name="fullName"
+                                    value={formData.fullName}
+                                    onChange={handleChange}
+                                    required
                                     className="w-full bg-neutral-900/50 border border-neutral-700 text-white rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all placeholder:text-neutral-600"
                                     placeholder="Nguyễn Văn A"
                                 />
@@ -41,6 +101,10 @@ export default function Register() {
                                 </div>
                                 <input
                                     type="text"
+                                    name="phoneNumber"
+                                    value={formData.phoneNumber}
+                                    onChange={handleChange}
+                                    required
                                     className="w-full bg-neutral-900/50 border border-neutral-700 text-white rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all placeholder:text-neutral-600"
                                     placeholder="09xx xxx xxx"
                                 />
@@ -55,6 +119,10 @@ export default function Register() {
                                 </div>
                                 <input
                                     type="email"
+                                    name="email"
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                    required
                                     className="w-full bg-neutral-900/50 border border-neutral-700 text-white rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all placeholder:text-neutral-600"
                                     placeholder="name@example.com"
                                 />
@@ -69,6 +137,10 @@ export default function Register() {
                                 </div>
                                 <input
                                     type="password"
+                                    name="password"
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                    required
                                     className="w-full bg-neutral-900/50 border border-neutral-700 text-white rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent transition-all placeholder:text-neutral-600"
                                     placeholder="••••••••"
                                 />
@@ -76,10 +148,13 @@ export default function Register() {
                         </div>
 
                         <button
-                            type="button"
-                            className="w-full bg-[#D4AF37] text-neutral-900 py-3.5 rounded-xl font-semibold hover:bg-yellow-500 transition-all flex items-center justify-center gap-2 group shadow-[0_4px_14px_0_rgba(212,175,55,0.2)] hover:shadow-[0_6px_20px_rgba(212,175,55,0.3)] mt-2"
+                            type="submit"
+                            disabled={loading}
+                            className="w-full bg-[#D4AF37] text-neutral-900 py-3.5 rounded-xl font-semibold hover:bg-yellow-500 transition-all flex items-center justify-center gap-2 group shadow-[0_4px_14px_0_rgba(212,175,55,0.2)] hover:shadow-[0_6px_20px_rgba(212,175,55,0.3)] mt-2 disabled:opacity-50"
                         >
-                            Tạo tài khoản <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                            {loading ? 'Đang xử lý...' : (
+                                <>Tạo tài khoản <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></>
+                            )}
                         </button>
 
                         <p className="text-xs text-center text-neutral-500 mt-4">

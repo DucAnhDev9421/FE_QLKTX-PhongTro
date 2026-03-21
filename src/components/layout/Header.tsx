@@ -90,7 +90,7 @@ export const Header = () => {
                         </div>
                     </div>
                 </div>
-                <Link to="/profile" className="flex items-center gap-3 pl-4 ml-2 border-l border-slate-800 hover:opacity-80 transition-opacity cursor-pointer">
+                <Link to="/manage/profile" className="flex items-center gap-3 pl-4 ml-2 border-l border-slate-800 hover:opacity-80 transition-opacity cursor-pointer">
                     <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center font-bold text-sm border border-emerald-500/30">
                         AD
                     </div>

@@ -3,10 +3,13 @@ import { ArrowRight, Home, Shield, Wifi, Sun, Moon, MapPin, Maximize, Users, Sta
 import { useTheme } from '../../contexts/ThemeContext';
 import { mockRooms } from '../../mock/data';
 import demoImg from '../../assets/demo.jpg';
+import avatarImg from '../../assets/man-avatar-png-image_6514640.png';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function LandingPage() {
     const { theme, toggleTheme } = useTheme();
+    const { user } = useAuth();
 
     // Lấy 3 phòng đang trống để hiển thị ở mục Tour
     const availableRooms = mockRooms.filter(r => r.currentStatus === 'AVAILABLE').slice(0, 3);
@@ -37,9 +40,15 @@ export default function LandingPage() {
                             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
                         </button>
 
-                        <Link to="/login" className="bg-[#D4AF37] text-neutral-900 px-6 py-2.5 flex items-center gap-2 rounded-full hover:bg-yellow-500 transition-colors shadow-lg hover:shadow-xl font-semibold">
-                            Cổng cư dân <ArrowRight size={16} />
-                        </Link>
+                        {user ? (
+                            <Link to="/my-profile" className="flex items-center gap-3">
+                                <img src={avatarImg} alt="User Avatar" className="w-10 h-10 rounded-full border-2 border-[#D4AF37] shadow-lg hover:scale-105 transition-transform" />
+                            </Link>
+                        ) : (
+                            <Link to="/login" className="bg-[#D4AF37] text-neutral-900 px-6 py-2.5 flex items-center gap-2 rounded-full hover:bg-yellow-500 transition-colors shadow-lg hover:shadow-xl font-semibold">
+                                Cổng cư dân <ArrowRight size={16} />
+                            </Link>
+                        )}
                     </div>
                 </div>
             </nav>

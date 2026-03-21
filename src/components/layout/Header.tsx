@@ -1,11 +1,13 @@
-import React from 'react';
 import { Bell, Search, Menu, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import avatarImg from '../../assets/man-avatar-png-image_6514640.png';
 
 export const Header = () => {
     const { theme, toggleTheme } = useTheme();
-
+    const { user } = useAuth();
+    
     return (
         <header className="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 sticky top-0 z-40">
             <div className="flex items-center gap-4">
@@ -91,12 +93,12 @@ export const Header = () => {
                     </div>
                 </div>
                 <Link to="/manage/profile" className="flex items-center gap-3 pl-4 ml-2 border-l border-slate-800 hover:opacity-80 transition-opacity cursor-pointer">
-                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center font-bold text-sm border border-emerald-500/30">
-                        AD
+                    <div className="w-8 h-8 rounded-full border border-emerald-500/30 overflow-hidden shrink-0">
+                        <img src={avatarImg} alt="Avatar" className="w-full h-full object-cover" />
                     </div>
-                    <div className="hidden text-sm sm:block">
-                        <div className="font-medium text-slate-200">Admin User</div>
-                        <div className="text-slate-500 text-xs">Quản trị viên</div>
+                    <div className="hidden text-sm sm:block max-w-[120px]">
+                        <div className="font-medium text-slate-200 truncate">{user?.fullName || user?.username || 'Đang tải...'}</div>
+                        <div className="text-slate-500 text-xs truncate">{user?.role?.replace('SCOPE_', '') || 'User'}</div>
                     </div>
                 </Link>
             </div>

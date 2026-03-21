@@ -1,33 +1,73 @@
-import { useState } from 'react';
-import { ArrowLeft, Home, MapPin, Maximize, Shield, Users, Wifi, Sun, Moon } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { ArrowLeft, Home, MapPin, Shield, Users, Wifi, Sun, Moon, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Room } from '../../types';
-import { mockBuildings, mockRoomTypes, mockRooms } from '../../mock/data';
 import demoImg from '../../assets/demo.jpg';
 import { useTheme } from '../../contexts/ThemeContext';
+import { buildingService } from '../../services/building';
+import { roomService } from '../../services/room';
 
 export default function PublicRooms() {
     const { theme, toggleTheme } = useTheme();
-    const [filterBuilding, setFilterBuilding] = useState<number | 'ALL'>('ALL');
+    
+    // Filter State
+    const [filterBuilding, setFilterBuilding] = useState<string | 'ALL'>('ALL');
     const [filterType, setFilterType] = useState<number | 'ALL'>('ALL');
     const [filterStatus, setFilterStatus] = useState<'ALL' | 'AVAILABLE'>('AVAILABLE');
     const [filterPrice, setFilterPrice] = useState<'ALL' | 'UNDER_4M' | '4M_TO_6M' | 'OVER_6M'>('ALL');
 
-    // Lọc danh sách phòng
-    const filteredRooms = mockRooms.filter(room => {
-        if (filterBuilding !== 'ALL' && room.floor.building.buildingId !== filterBuilding) return false;
-        if (filterType !== 'ALL' && room.roomType.roomTypeId !== filterType) return false;
-        if (filterStatus !== 'ALL' && room.currentStatus !== filterStatus) return false;
-
-        if (filterPrice !== 'ALL') {
-            const price = room.roomType.basePrice;
-            if (filterPrice === 'UNDER_4M' && price >= 4000000) return false;
-            if (filterPrice === '4M_TO_6M' && (price < 4000000 || price > 6000000)) return false;
-            if (filterPrice === 'OVER_6M' && price <= 6000000) return false;
-        }
-
-        return true;
+    // Fetch Buildings
+    const { data: buildingsData, isLoading: isLoadingBuildings } = useQuery({
+        queryKey: ['buildings'],
+        queryFn: () => buildingService.getBuildings()
     });
+    // Sort buildings alphabetically
+    const buildings = useMemo(() => {
+        const raw = buildingsData?.result || [];
+        return [...raw].sort((a: any, b: any) => a.buildingName.localeCompare(b.buildingName));
+    }, [buildingsData]);
+
+    // Fetch Room Types
+    const { data: roomTypesData, isLoading: isLoadingTypes } = useQuery({
+        queryKey: ['roomTypes'],
+        queryFn: () => roomService.getRoomTypes()
+    });
+    // Sort types by name
+    const roomTypes = useMemo(() => {
+        const raw = roomTypesData?.result || [];
+        return [...raw].sort((a: any, b: any) => a.typeName.localeCompare(b.typeName));
+    }, [roomTypesData]);
+
+    // Fetch Rooms
+    const { data: roomsData, isLoading: isLoadingRooms } = useQuery({
+        queryKey: ['publicRooms'],
+        queryFn: () => roomService.getRooms()
+    });
+    const rooms = roomsData?.result || [];
+
+    const isLoading = isLoadingBuildings || isLoadingTypes || isLoadingRooms;
+
+    // Lọc danh sách phòng
+    const filteredRooms = useMemo(() => {
+        return rooms.filter((room: any) => {
+            const buildingName = room.buildingName;
+            const roomTypeId = room.roomTypeId;
+            const currentStatus = room.currentStatus;
+            const price = room.price;
+
+            if (filterBuilding !== 'ALL' && buildingName !== filterBuilding) return false;
+            if (filterType !== 'ALL' && roomTypeId !== filterType) return false;
+            if (filterStatus !== 'ALL' && currentStatus !== filterStatus) return false;
+
+            if (filterPrice !== 'ALL') {
+                if (filterPrice === 'UNDER_4M' && price >= 4000000) return false;
+                if (filterPrice === '4M_TO_6M' && (price < 4000000 || price > 6000000)) return false;
+                if (filterPrice === 'OVER_6M' && price <= 6000000) return false;
+            }
+
+            return true;
+        });
+    }, [rooms, filterBuilding, filterType, filterStatus, filterPrice]);
 
     return (
         <div className={`min-h-screen font-sans selection:bg-yellow-500/30 pb-20 transition-colors duration-300 ${theme === 'dark' ? 'bg-neutral-900 text-neutral-100' : 'bg-neutral-50 text-neutral-900'
@@ -80,11 +120,11 @@ export default function PublicRooms() {
                                 className={`w-full rounded-lg px-4 py-3 focus:ring-1 focus:ring-[#D4AF37] focus:border-[#D4AF37] outline-none transition-all appearance-none ${theme === 'dark' ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-neutral-300 text-neutral-900'
                                     }`}
                                 value={filterBuilding}
-                                onChange={(e) => setFilterBuilding(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+                                onChange={(e) => setFilterBuilding(e.target.value)}
                             >
                                 <option value="ALL">Tất cả cơ sở</option>
-                                {mockBuildings.map(b => (
-                                    <option key={b.buildingId} value={b.buildingId}>{b.buildingName}</option>
+                                {buildings.map((b: any) => (
+                                    <option key={b.buildingId} value={b.buildingName}>{b.buildingName}</option>
                                 ))}
                             </select>
                         </div>
@@ -99,7 +139,7 @@ export default function PublicRooms() {
                                 onChange={(e) => setFilterType(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
                             >
                                 <option value="ALL">Tất cả loại phòng</option>
-                                {mockRoomTypes.map(t => (
+                                {roomTypes.map((t: any) => (
                                     <option key={t.roomTypeId} value={t.roomTypeId}>{t.typeName}</option>
                                 ))}
                             </select>
@@ -138,9 +178,13 @@ export default function PublicRooms() {
                 </div>
 
                 {/* Rooms Grid */}
-                {filteredRooms.length > 0 ? (
+                {isLoading ? (
+                    <div className="flex justify-center items-center py-20">
+                        <Loader2 size={48} className={`animate-spin ${theme === 'dark' ? 'text-[#D4AF37]' : 'text-yellow-600'}`} />
+                    </div>
+                ) : filteredRooms.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {filteredRooms.map(room => (
+                        {filteredRooms.map((room: any) => (
                             <RoomCard key={room.roomId} room={room} theme={theme} />
                         ))}
                     </div>
@@ -170,16 +214,19 @@ export default function PublicRooms() {
     );
 }
 
-function RoomCard({ room, theme }: { room: Room, theme: string }) {
+function RoomCard({ room, theme }: { room: any, theme: string }) {
     const isAvailable = room.currentStatus === 'AVAILABLE';
     const isMaintenance = room.currentStatus === 'MAINTENANCE';
+
+    // Get the first image or fallback to demo
+    const imageSrc = room.imageUrls && room.imageUrls.length > 0 ? room.imageUrls[0] : demoImg;
 
     return (
         <div className="group bg-neutral-800/50 border border-neutral-700/50 rounded-2xl overflow-hidden hover:border-[#D4AF37]/50 transition-all hover:shadow-[0_8px_30px_rgba(212,175,55,0.15)] flex flex-col">
             {/* Image Placeholder */}
             <div className="h-48 bg-neutral-800 relative overflow-hidden">
                 <img
-                    src={demoImg}
+                    src={imageSrc}
                     alt={`Phòng ${room.roomNumber}`}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80"
                 />
@@ -187,11 +234,11 @@ function RoomCard({ room, theme }: { room: Room, theme: string }) {
 
                 {/* Status Badge */}
                 <div className="absolute top-4 right-4 z-10">
-                    <span className={`px-3 py-1 text-xs font-semibold rounded-full border backdrop-blur-md ${isAvailable
-                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                    <span className={`px-3 py-1.5 text-[11px] font-bold rounded-lg shadow-lg uppercase tracking-wider backdrop-blur-sm ${isAvailable
+                        ? 'bg-emerald-600/90 text-white border-emerald-400/30'
                         : isMaintenance
-                            ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                            : 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                            ? 'bg-amber-500/90 text-white border-amber-400/30'
+                            : 'bg-rose-600/90 text-white border-rose-400/30'
                         }`}>
                         {isAvailable ? 'Đang trống' : isMaintenance ? 'Bảo trì' : 'Đã thuê'}
                     </span>
@@ -208,22 +255,18 @@ function RoomCard({ room, theme }: { room: Room, theme: string }) {
             <div className="p-6 flex-1 flex flex-col">
                 <div className="flex justify-between items-start mb-4">
                     <div>
-                        <h3 className="text-xl font-bold text-[#D4AF37] mb-1">{room.roomType.typeName}</h3>
+                        <h3 className="text-xl font-bold text-[#D4AF37] mb-1">{room.roomTypeName || 'Phòng Thường'}</h3>
                         <p className={`text-sm flex items-center gap-1.5 ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>
                             <MapPin size={14} />
-                            {room.floor.building.buildingName} - {room.floor.floorName}
+                            {room.buildingName} - {room.floorName}
                         </p>
                     </div>
                 </div>
 
                 <div className={`grid grid-cols-2 gap-y-4 gap-x-2 text-sm mb-6 flex-1 ${theme === 'dark' ? 'text-neutral-300' : 'text-neutral-600'}`}>
                     <div className="flex items-center gap-2">
-                        <Maximize className={theme === 'dark' ? 'text-neutral-500' : 'text-neutral-400'} size={16} />
-                        <span>{room.roomType.area} m²</span>
-                    </div>
-                    <div className="flex items-center gap-2">
                         <Users className={theme === 'dark' ? 'text-neutral-500' : 'text-neutral-400'} size={16} />
-                        <span>Tối đa {room.roomType.maxOccupancy} người</span>
+                        <span>Ký túc xá / Trọ</span>
                     </div>
                     <div className="flex items-center gap-2">
                         <Shield className={theme === 'dark' ? 'text-neutral-500' : 'text-neutral-400'} size={16} />
@@ -239,7 +282,7 @@ function RoomCard({ room, theme }: { room: Room, theme: string }) {
                     <div>
                         <p className={`text-xs mb-1 ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>Giá thuê từ</p>
                         <div className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-neutral-900'}`}>
-                            {new Intl.NumberFormat('vi-VN').format(room.roomType.basePrice)}
+                            {new Intl.NumberFormat('vi-VN').format(room.price)}
                             <span className={`text-sm font-normal ml-1 ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>đ/tháng</span>
                         </div>
                     </div>

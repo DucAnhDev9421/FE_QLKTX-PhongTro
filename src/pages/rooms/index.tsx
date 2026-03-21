@@ -215,10 +215,10 @@ function RoomCard({ room, onEdit, onChangeStatus, onOpenImages }: { room: any, o
     };
 
     const statusBadgeClasses: Record<string, string> = {
-        'AVAILABLE': 'bg-emerald-500/20 text-emerald-500 border-emerald-500/30',
-        'OCCUPIED': 'bg-blue-500/20 text-blue-500 border-blue-500/30',
-        'MAINTENANCE': 'bg-amber-500/20 text-amber-500 border-amber-500/30',
-        'BOOKED': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+        'AVAILABLE': 'bg-emerald-600 text-white border-emerald-500/50 shadow-lg shadow-emerald-900/20',
+        'OCCUPIED': 'bg-blue-600 text-white border-blue-500/50 shadow-lg shadow-blue-900/20',
+        'MAINTENANCE': 'bg-amber-500 text-white border-amber-400/50 shadow-lg shadow-amber-900/20',
+        'BOOKED': 'bg-purple-600 text-white border-purple-500/50 shadow-lg shadow-purple-900/20',
     };
 
     const statusIconColor: Record<string, string> = {
@@ -258,7 +258,7 @@ function RoomCard({ room, onEdit, onChangeStatus, onOpenImages }: { room: any, o
                     </span>
                 )}
                 {/* Status Badge over image */}
-                <span className={`absolute top-2 right-2 text-xs font-medium px-2.5 py-1 rounded-full border backdrop-blur-sm ${statusBadgeClasses[room.currentStatus] || statusBadgeClasses['AVAILABLE']}`}>
+                <span className={`absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide border shadow-sm ${statusBadgeClasses[room.currentStatus] || statusBadgeClasses['AVAILABLE']}`}>
                     {getStatusText(room.currentStatus)}
                 </span>
             </div>

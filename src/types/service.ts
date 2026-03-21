@@ -1,16 +1,28 @@
-export interface Service {
-    id: string;
-    name: string;
+export interface ServiceInfoResponse {
+    serviceId: number;
+    serviceName: string;
     unit: string;
-    basePrice: number;
-    type: 'METERED' | 'FIXED';
-    description?: string;
-    status: 'ACTIVE' | 'INACTIVE';
+    calculationMethod: string;
+    icon?: string;
 }
 
-export interface BuildingService {
-    id: string;
-    buildingId: string;
-    serviceId: string;
-    customPrice: number;
+export interface ServiceInfoRequest {
+    serviceName: string;
+    unit: string;
+    calculationMethod: string;
+    icon?: string;
+}
+
+export interface BuildingServiceResponse {
+    buildingServiceId: number;
+    buildingId: number;
+    serviceId: number;
+    serviceName: string;
+    unit: string;
+    unitPrice: number;
+}
+
+export interface BuildingServiceRequest {
+    serviceId: number;
+    unitPrice: number;
 }

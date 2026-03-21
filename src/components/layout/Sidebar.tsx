@@ -1,4 +1,4 @@
-import { Home, Users, DollarSign, Activity, FileText, Settings, LogOut, Building, Receipt, Zap, LayoutList, UserCog } from 'lucide-react';
+import { Home, Users, DollarSign, Activity, FileText, Settings, LogOut, Building, Receipt, Zap, LayoutList, UserCog, Archive } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
 export const Sidebar = () => {
@@ -27,6 +27,10 @@ export const Sidebar = () => {
 
         <NavLink to="/manage/tenants" className={({ isActive }) => isActive ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-emerald-500/10 text-emerald-500' : 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-800 hover:text-50'}>
           <Users size={20} /> <span className="font-medium">Người thuê</span>
+        </NavLink>
+
+        <NavLink to="/manage/assets" className={({ isActive }) => isActive ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-emerald-500/10 text-emerald-500' : 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-800 hover:text-50'}>
+          <Archive size={20} /> <span className="font-medium">Tài sản</span>
         </NavLink>
 
         <NavLink to="/manage/meter-readings" className={({ isActive }) => isActive ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-emerald-500/10 text-emerald-500' : 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-800 hover:text-50'}>

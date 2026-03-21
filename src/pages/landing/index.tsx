@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, Home, Shield, Wifi, Sun, Moon, MapPin, Maximize, Users, Star, CheckCircle } from 'lucide-react';
+import { ArrowRight, Home, Shield, Sun, Moon, Maximize, Users, Star, CheckCircle } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { mockRooms } from '../../mock/data';
 import demoImg from '../../assets/demo.jpg';
@@ -10,6 +10,13 @@ import { useAuth } from '../../hooks/useAuth';
 export default function LandingPage() {
     const { theme, toggleTheme } = useTheme();
     const { user } = useAuth();
+    const isAdminOrOwner = React.useMemo(() => {
+        if (!user) return false;
+        const roleStr = (user.role || '').toUpperCase();
+        const roleArray = Array.isArray(user.roles) ? user.roles : [];
+        return roleStr.includes('ADMIN') || roleStr.includes('OWNER') || 
+               roleArray.some(r => r.toUpperCase().includes('ADMIN') || r.toUpperCase().includes('OWNER'));
+    }, [user]);
 
     // Lấy 3 phòng đang trống để hiển thị ở mục Tour
     const availableRooms = mockRooms.filter(r => r.currentStatus === 'AVAILABLE').slice(0, 3);
@@ -39,6 +46,20 @@ export default function LandingPage() {
                         >
                             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
                         </button>
+
+                        {isAdminOrOwner && (
+                            <Link 
+                                to="/manage" 
+                                className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all font-semibold text-sm ${
+                                    theme === 'dark' 
+                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20' 
+                                    : 'bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-100'
+                                }`}
+                            >
+                                <Shield size={16} />
+                                Quản lý
+                            </Link>
+                        )}
 
                         {user ? (
                             <Link to="/my-profile" className="flex items-center gap-3">
@@ -122,7 +143,7 @@ export default function LandingPage() {
                     <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
                         <div>
                             <div className="flex items-center gap-2 text-[#D4AF37] font-semibold tracking-wider text-sm mb-3 uppercase">
-                                <Sparkles theme={theme} /> Không gian thực tế
+                                <Sparkles /> Không gian thực tế
                             </div>
                             <h2 className="text-4xl md:text-5xl font-bold">Góc sống <span className="text-[#D4AF37]">trang nhã</span></h2>
                             <p className={`mt-4 max-w-xl text-lg ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-600'}`}>
@@ -259,7 +280,7 @@ function FeatureCard({ icon, title, desc, theme }: { icon: React.ReactNode, titl
     );
 }
 
-function Sparkles({ theme }: { theme: string }) {
+function Sparkles() {
     return (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#D4AF37]">
             <path d="M10 1L12.596 8.40398L20 11L12.596 13.596L10 21L7.40398 13.596L0 11L7.40398 8.40398L10 1Z" fill="currentColor" />

@@ -24,6 +24,7 @@ const Profile = React.lazy(() => import('./pages/profile'));
 const Login = React.lazy(() => import('./pages/auth/login'));
 const Register = React.lazy(() => import('./pages/auth/register'));
 const MyProfile = React.lazy(() => import('./pages/my-profile'));
+const Assets = React.lazy(() => import('./pages/assets'));
 
 const queryClient = new QueryClient();
 
@@ -61,6 +62,7 @@ function App() {
                                 <Route path="buildings" element={<Buildings />} />
                                 <Route path="rooms" element={<Rooms />} />
                                 <Route path="tenants" element={<Tenants />} />
+                                <Route path="assets" element={<Assets />} />
                                 <Route path="invoices" element={<Invoices />} />
                                 <Route path="contracts" element={<Contracts />} />
                                 <Route path="payments" element={<Payments />} />

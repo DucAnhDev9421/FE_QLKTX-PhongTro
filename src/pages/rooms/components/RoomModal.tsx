@@ -61,6 +61,13 @@ export default function RoomModal({ room, onClose }: Props) {
         enabled: !!selectedBuildingId
     });
     const floors = floorsData?.result || [];
+    
+    // Sort floors numerically based on floorName (e.g., "Tầng 1", "Tầng 10")
+    const sortedFloors = [...floors].sort((a, b) => {
+        const numA = parseInt(a.floorName.replace(/\D/g, '')) || 0;
+        const numB = parseInt(b.floorName.replace(/\D/g, '')) || 0;
+        return numA - numB;
+    });
 
     const mutation = useMutation({
         mutationFn: (data: any) => isEdit 
@@ -163,7 +170,7 @@ export default function RoomModal({ room, onClose }: Props) {
                                             {isEdit && !selectedBuildingId && room.floorId && (
                                                 <option value={room.floorId} className="bg-slate-900 text-slate-200">{room.floorName} ({room.buildingName})</option>
                                             )}
-                                            {floors.map((f: any) => (
+                                            {sortedFloors.map((f: any) => (
                                                 <option key={f.floorId} value={f.floorId} className="bg-slate-900 text-slate-200">{f.floorName}</option>
                                             ))}
                                         </select>

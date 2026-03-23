@@ -6,6 +6,7 @@ dist-ssr/
 .agent/
 docs/
 J2EE_QLKTX-PhongTro/
+agent.md
 
 # Environment Variables 
 .env

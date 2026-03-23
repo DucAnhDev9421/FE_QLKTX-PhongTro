@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Check, Compass, Home, MapPin, Shield, Wifi, Sun, Moon, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Check, Compass, Home, MapPin, Shield, Wifi, Sun, Moon, Loader2, ChevronLeft, ChevronRight, Wind, Box, Utensils, ChefHat, Armchair, Bath, Coffee, Lock, Smartphone, Layout } from 'lucide-react';
 import demoImg from '../../assets/demo.jpg';
 import { useTheme } from '../../contexts/ThemeContext';
-import { roomService } from '../../services/room';
+import { roomService, configService } from '../../services';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function RoomDetail() {
     const { id } = useParams();
     const { theme, toggleTheme } = useTheme();
+    const { user, loading: authLoading } = useAuth();
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
     const { data: roomData, isLoading } = useQuery({
@@ -19,7 +21,15 @@ export default function RoomDetail() {
 
     const room = roomData?.result;
 
-    if (isLoading) {
+    const { data: servicesData } = useQuery({
+        queryKey: ['buildingServices', room?.buildingId],
+        queryFn: () => configService.getBuildingServices(room!.buildingId),
+        enabled: !!room?.buildingId
+    });
+
+    const services = servicesData?.result || [];
+
+    if (isLoading || authLoading) {
         return (
             <div className={`min-h-screen flex items-center justify-center ${theme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-50'}`}>
                 <Loader2 size={48} className="animate-spin text-[#D4AF37]" />
@@ -51,6 +61,23 @@ export default function RoomDetail() {
 
     const prevImage = () => {
         setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+    };
+
+    const getAmenityIcon = (name: string) => {
+        const lowerName = name.toLowerCase();
+        if (lowerName.includes('điều hòa') || lowerName.includes('wi-fi')) return <Wind size={24} />;
+        if (lowerName.includes('tủ lạnh mini')) return <Box size={24} />;
+        if (lowerName.includes('tủ lạnh dung tích lớn')) return <Box size={24} />;
+        if (lowerName.includes('bếp')) return <Utensils size={24} />;
+        if (lowerName.includes('lò vi sóng') || lowerName.includes('máy hút mùi')) return <ChefHat size={24} />;
+        if (lowerName.includes('bàn ăn')) return <Utensils size={24} />;
+        if (lowerName.includes('sofa') || lowerName.includes('khu tiếp khách')) return <Armchair size={24} />;
+        if (lowerName.includes('bồn tắm')) return <Bath size={24} />;
+        if (lowerName.includes('cà phê')) return <Coffee size={24} />;
+        if (lowerName.includes('két sắt')) return <Lock size={24} />;
+        if (lowerName.includes('ban công')) return <Layout size={24} />;
+        if (lowerName.includes('smart home')) return <Smartphone size={24} />;
+        return <Check size={24} />;
     };
 
     return (
@@ -166,19 +193,23 @@ export default function RoomDetail() {
                         }`}>
                         <div className="flex flex-col gap-1">
                             <span className={`text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>Loại phòng</span>
-                            <span className="text-xl font-semibold flex items-center gap-2"><Home size={18} className="text-[#D4AF37]" /> Ký túc xá</span>
+                            <span className="text-xl font-semibold flex items-center gap-2"><Home size={18} className="text-[#D4AF37]" /> {room.roomTypeName || 'Ký túc xá'}</span>
                         </div>
                         <div className="flex flex-col gap-1">
                             <span className={`text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>Tầng</span>
                             <span className="text-xl font-semibold flex items-center gap-2"><Compass size={18} className="text-[#D4AF37]" /> {room.floorName}</span>
                         </div>
                         <div className="flex flex-col gap-1">
-                            <span className={`text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>An ninh</span>
-                            <span className="text-xl font-semibold flex items-center gap-2"><Shield size={18} className="text-[#D4AF37]" /> 24/7</span>
+                            <span className={`text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>Tòa nhà</span>
+                            <span className="text-xl font-semibold flex items-center gap-2"><Home size={18} className="text-[#D4AF37]" /> {room.buildingName}</span>
                         </div>
                         <div className="flex flex-col gap-1">
                             <span className={`text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>Tình trạng</span>
-                            <span className={`text-xl font-semibold ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-500'}`}>Mới 100%</span>
+                            <span className={`text-xl font-semibold ${
+                                room.currentStatus === 'AVAILABLE' ? (theme === 'dark' ? 'text-emerald-400' : 'text-emerald-500') : (theme === 'dark' ? 'text-rose-400' : 'text-rose-500')
+                            }`}>
+                                {room.currentStatus === 'AVAILABLE' ? 'Sẵn sàng' : room.currentStatus === 'MAINTENANCE' ? 'Bảo trì' : 'Đã thuê'}
+                            </span>
                         </div>
                     </div>
 
@@ -200,30 +231,39 @@ export default function RoomDetail() {
                             <Check className="text-[#D4AF37]" /> Tiện ích đi kèm
                         </h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className={`p-4 rounded-xl border flex items-center gap-4 transition-colors ${theme === 'dark' ? 'bg-neutral-800/50 border-neutral-700' : 'bg-white border-neutral-200 shadow-sm'
-                                }`}>
-                                <div className={`p-3 rounded-lg text-[#D4AF37] ${theme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-50'}`}><Wifi size={24} /></div>
-                                <div>
-                                    <div className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-neutral-900'}`}>Wifi Tốc Độ Cao</div>
-                                    <div className={`text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>Hạ tầng viễn thông riêng biệt</div>
-                                </div>
-                            </div>
-                            <div className={`p-4 rounded-xl border flex items-center gap-4 transition-colors ${theme === 'dark' ? 'bg-neutral-800/50 border-neutral-700' : 'bg-white border-neutral-200 shadow-sm'
-                                }`}>
-                                <div className={`p-3 rounded-lg text-[#D4AF37] ${theme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-50'}`}><Shield size={24} /></div>
-                                <div>
-                                    <div className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-neutral-900'}`}>An Ninh Đảm Bảo</div>
-                                    <div className={`text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>Hệ thống camera an ninh 24/7</div>
-                                </div>
-                            </div>
-                            <div className={`p-4 rounded-xl border flex items-center gap-4 transition-colors ${theme === 'dark' ? 'bg-neutral-800/50 border-neutral-700' : 'bg-white border-neutral-200 shadow-sm'
-                                }`}>
-                                <div className={`p-3 rounded-lg text-[#D4AF37] ${theme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-50'}`}><Home size={24} /></div>
-                                <div>
-                                    <div className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-neutral-900'}`}>Tiêu chuẩn sạch sẽ</div>
-                                    <div className={`text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>Được dọn dẹp vệ sinh khu vực chung</div>
-                                </div>
-                            </div>
+                            {room.description ? (
+                                room.description.split(', ').map((item: string) => (
+                                    <div key={item} className={`p-4 rounded-xl border flex items-center gap-4 transition-colors ${theme === 'dark' ? 'bg-neutral-800/50 border-neutral-700' : 'bg-white border-neutral-200 shadow-sm'
+                                        }`}>
+                                        <div className={`p-3 rounded-lg text-[#D4AF37] ${theme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-50'}`}>
+                                            {getAmenityIcon(item)}
+                                        </div>
+                                        <div>
+                                            <div className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-neutral-900'}`}>{item}</div>
+                                            <div className={`text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>Trang bị sẵn trong phòng</div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <>
+                                    <div className={`p-4 rounded-xl border flex items-center gap-4 transition-colors ${theme === 'dark' ? 'bg-neutral-800/50 border-neutral-700' : 'bg-white border-neutral-200 shadow-sm'
+                                        }`}>
+                                        <div className={`p-3 rounded-lg text-[#D4AF37] ${theme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-50'}`}><Wifi size={24} /></div>
+                                        <div>
+                                            <div className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-neutral-900'}`}>Wifi Tốc Độ Cao</div>
+                                            <div className={`text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>Hạ tầng viễn thông riêng biệt</div>
+                                        </div>
+                                    </div>
+                                    <div className={`p-4 rounded-xl border flex items-center gap-4 transition-colors ${theme === 'dark' ? 'bg-neutral-800/50 border-neutral-700' : 'bg-white border-neutral-200 shadow-sm'
+                                        }`}>
+                                        <div className={`p-3 rounded-lg text-[#D4AF37] ${theme === 'dark' ? 'bg-neutral-900' : 'bg-neutral-50'}`}><Shield size={24} /></div>
+                                        <div>
+                                            <div className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-neutral-900'}`}>An Ninh Đảm Bảo</div>
+                                            <div className={`text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>Hệ thống camera an ninh 24/7</div>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </section>
                 </div>
@@ -243,32 +283,52 @@ export default function RoomDetail() {
                         <div className="space-y-4 mb-8">
                             <div className="flex justify-between text-sm">
                                 <span className={theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}>Cọc đảm bảo</span>
-                                <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-neutral-900'}`}>1 tháng tiền phòng</span>
+                                <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-neutral-900'}`}>
+                                    {formatPrice(room.price)}đ (1 tháng)
+                                </span>
                             </div>
-                            <div className="flex justify-between text-sm">
-                                <span className={theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}>Điện sinh hoạt</span>
-                                <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-neutral-900'}`}>3.800đ / kWh</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className={theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}>Nước sinh hoạt</span>
-                                <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-neutral-900'}`}>100.000đ / người</span>
-                            </div>
+                            {services.map((service: any) => (
+                                <div key={service.buildingServiceId} className="flex justify-between text-sm">
+                                    <span className={theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}>{service.serviceName}</span>
+                                    <span className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-neutral-900'}`}>
+                                        {formatPrice(service.unitPrice)}đ / {service.unit === '1' ? 'lần' : service.unit}
+                                    </span>
+                                </div>
+                            ))}
                         </div>
 
-                        <button
-                            disabled={!isAvailable}
-                            className={`w-full py-4 rounded-xl font-bold text-lg transition-all mb-4 ${isAvailable
-                                ? 'bg-[#D4AF37] hover:bg-yellow-500 text-neutral-900 shadow-[0_0_20px_rgba(212,175,55,0.4)] hover:shadow-[0_0_30px_rgba(212,175,55,0.6)]'
-                                : theme === 'dark' ? 'bg-neutral-700 text-neutral-500 cursor-not-allowed' : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
-                                }`}
-                        >
-                            {isAvailable ? 'ĐĂNG KÝ XEM PHÒNG' : 'PHÒNG ĐÃ CÓ NGƯỜI THUÊ'}
-                        </button>
+                        {!isAvailable ? (
+                            <div className={`w-full py-4 rounded-xl font-bold text-lg text-center transition-all ${theme === 'dark' ? 'bg-neutral-700 text-neutral-500 cursor-not-allowed' : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
+                                }`}>
+                                PHÒNG ĐÃ CÓ NGƯỜI THUÊ
+                            </div>
+                        ) : !user ? (
+                            <Link
+                                to="/login"
+                                className="block w-full py-4 rounded-xl font-bold text-lg text-center bg-[#D4AF37] hover:bg-yellow-500 text-neutral-900 shadow-[0_0_20px_rgba(212,175,55,0.4)] hover:shadow-[0_0_30px_rgba(212,175,55,0.6)] transition-all"
+                            >
+                                ĐĂNG NHẬP ĐỂ THUÊ
+                            </Link>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className={`w-full py-3 rounded-xl font-bold text-lg text-center bg-[#D4AF37] text-neutral-900 shadow-[0_0_20px_rgba(212,175,55,0.4)]`}>
+                                    YÊU CẦU THUÊ PHÒNG
+                                </div>
+                                <div className={`p-4 rounded-xl border ${theme === 'dark' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-100' : 'bg-emerald-50 border-emerald-200 text-emerald-800'}`}>
+                                    <h4 className="font-semibold mb-2 flex items-center gap-2"><Check size={18} /> Hướng dẫn làm thủ tục</h4>
+                                    <ol className="list-decimal list-inside space-y-2 text-sm">
+                                        <li>Hoàn thiện thông tin & tải CCCD tại <b><Link to="/my-profile" className="underline font-medium hover:text-emerald-500">Hồ sơ cá nhân</Link></b></li>
+                                        <li>Liên hệ Ban Quản Lý (SĐT: <b>0865.736.253</b>)</li>
+                                        <li>Cung cấp mã tài khoản của bạn: <br /><span className="font-mono bg-black/20 px-2 py-1 rounded select-all ml-4 block mt-1">{user.username}</span></li>
+                                        <li>Quản lý sẽ tiến hành lập hợp đồng thuê.</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        )}
 
-                        {/* Note about contact info based on API data */}
-                        <div className="text-center mt-4 pt-4 border-t border-neutral-700/50">
+                        <div className="text-center mt-6 pt-4 border-t border-neutral-700/50">
                             <p className={`text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>
-                                Liên hệ admin/quản lý để làm thủ tục.
+                                Cần hỗ trợ? Gọi: <span className="font-bold text-[#D4AF37]">0865.736.253</span>
                             </p>
                         </div>
                     </div>

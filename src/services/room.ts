@@ -24,6 +24,16 @@ export const roomService = {
         return response.data;
     },
 
+    updateRoomType: async (id: number | string, data: any) => {
+        const response = await api.put(`/v1/room-types/${id}`, data);
+        return response.data;
+    },
+
+    deleteRoomType: async (id: number | string) => {
+        const response = await api.delete(`/v1/room-types/${id}`);
+        return response.data;
+    },
+
     // Rooms
     getRooms: async (params?: { floorId?: number, status?: string, minPrice?: number, maxPrice?: number }) => {
         const response = await api.get('/v1/rooms', { params });

@@ -16,6 +16,7 @@ const Invoices = React.lazy(() => import('./pages/invoices'));
 const Contracts = React.lazy(() => import('./pages/contracts'));
 const Payments = React.lazy(() => import('./pages/payments'));
 const Reports = React.lazy(() => import('./pages/reports'));
+const Incidents = React.lazy(() => import('./pages/incidents'));
 const Settings = React.lazy(() => import('./pages/settings'));
 const Services = React.lazy(() => import('./pages/services'));
 const MeterReadings = React.lazy(() => import('./pages/meter-readings'));
@@ -67,6 +68,7 @@ function App() {
                                 <Route path="contracts" element={<Contracts />} />
                                 <Route path="payments" element={<Payments />} />
                                 <Route path="reports" element={<Reports />} />
+                                <Route path="incidents" element={<Incidents />} />
                                 <Route path="services" element={<Services />} />
                                 <Route path="meter-readings" element={<MeterReadings />} />
                                 <Route path="users" element={<Users />} />

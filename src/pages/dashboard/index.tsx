@@ -1,25 +1,82 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from '../../components/layout';
 import { Home, Users, DollarSign, Activity, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-
-const revenueData = [
-    { name: 'T1', total: 45000000 },
-    { name: 'T2', total: 47000000 },
-    { name: 'T3', total: 46500000 },
-    { name: 'T4', total: 52000000 },
-    { name: 'T5', total: 54000000 },
-    { name: 'T6', total: 51000000 },
-    { name: 'T7', total: 58000000 },
-];
-
-const occupancyData = [
-    { name: 'CS 1', Occupied: 45, Vacant: 5 },
-    { name: 'CS 2', Occupied: 38, Vacant: 12 },
-    { name: 'CS 3', Occupied: 50, Vacant: 0 },
-];
+import { statisticsService } from '../../services/statisticsService';
+import { tenantService } from '../../services/tenantService';
+import { incidentService } from '../../services/incidentService';
 
 export default function Dashboard() {
+    const [revenueData, setRevenueData] = useState<{ name: string; total: number }[]>([]);
+    const [occupancyData, setOccupancyData] = useState<{ name: string; Occupied: number; Vacant: number }[]>([]);
+    const [currentMonthRevenue, setCurrentMonthRevenue] = useState(0);
+    const [occupancyRate, setOccupancyRate] = useState(0);
+    const [tenantCount, setTenantCount] = useState(0);
+    const [pendingIncidentsCount, setPendingIncidentsCount] = useState(0);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const roomStats = await statisticsService.getRoomStatusStatistics();
+                setOccupancyData([{ 
+                    name: 'Toàn hệ thống', 
+                    Occupied: roomStats.rentedRooms, 
+                    Vacant: roomStats.emptyRooms 
+                }]);
+                
+                const rate = roomStats.totalRooms > 0 
+                    ? (roomStats.rentedRooms / roomStats.totalRooms) * 100 
+                    : 0;
+                setOccupancyRate(rate);
+
+                const currentDate = new Date();
+                const currentMonth = currentDate.getMonth() + 1;
+                const currentYear = currentDate.getFullYear();
+                
+                const revPromises = [];
+                for (let i = 5; i >= 0; i--) {
+                    let m = currentMonth - i;
+                    let y = currentYear;
+                    if (m <= 0) {
+                        m += 12;
+                        y -= 1;
+                    }
+                    revPromises.push(statisticsService.getRevenueByMonthAndYear(m, y));
+                }
+                
+                const revResults = await Promise.all(revPromises);
+                const newRevData = revResults.map(r => ({
+                    name: `T${r.month}`,
+                    total: r.totalRevenue || 0
+                }));
+                setRevenueData(newRevData);
+                
+                if (revResults.length > 0) {
+                    setCurrentMonthRevenue(revResults[revResults.length - 1].totalRevenue || 0);
+                }
+
+                // Fetch extra counts
+                const [tenants, incidents] = await Promise.all([
+                    tenantService.getTenants(),
+                    incidentService.getAllIncidents()
+                ]);
+                setTenantCount(tenants?.length || 0);
+                setPendingIncidentsCount(incidents?.filter((i: any) => i.status === 'PENDING').length || 0);
+            } catch (error) {
+                console.error("Error fetching statistics", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchStats();
+    }, []);
+
+    const formatCurrency = (val: number) => {
+        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+    };
+
     return (
         <Layout>
             <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -43,28 +100,28 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <StatCard
                     title="Tổng doanh thu tháng"
-                    value="58,000,000đ"
+                    value={loading ? "Đang tải..." : formatCurrency(currentMonthRevenue)}
                     trend="up"
                     trendValue="12.5%"
                     icon={<DollarSign size={20} className="text-emerald-500" />}
                 />
                 <StatCard
                     title="Tỷ lệ lấp đầy"
-                    value="85%"
+                    value={loading ? "Đang tải..." : `${occupancyRate.toFixed(1)}%`}
                     trend="up"
                     trendValue="3.2%"
                     icon={<Home size={20} className="text-blue-500" />}
                 />
                 <StatCard
                     title="Người thuê đang ở"
-                    value="133"
+                    value={loading ? "Đang tải..." : tenantCount.toString()}
                     trend="down"
                     trendValue="1.5%"
                     icon={<Users size={20} className="text-amber-500" />}
                 />
                 <StatCard
                     title="Yêu cầu cần xử lý"
-                    value="12"
+                    value={loading ? "Đang tải..." : pendingIncidentsCount.toString()}
                     trend="neutral"
                     trendValue="0"
                     icon={<Activity size={20} className="text-rose-500" />}

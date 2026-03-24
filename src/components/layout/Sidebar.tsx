@@ -55,6 +55,10 @@ export const Sidebar = () => {
           <Activity size={20} /> <span className="font-medium">Báo cáo</span>
         </NavLink>
 
+        <NavLink to="/manage/incidents" className={({ isActive }) => isActive ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-emerald-500/10 text-emerald-500' : 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-800 hover:text-50'}>
+          <Activity size={20} /> <span className="font-medium">Sự cố</span>
+        </NavLink>
+
         <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-8 mb-4 px-2">Hệ thống</div>
 
         <NavLink to="/manage/users" className={({ isActive }) => isActive ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-emerald-500/10 text-emerald-500' : 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-800 hover:text-50'}>

@@ -11,7 +11,7 @@ api.interceptors.request.use((config) => {
     }
     return config;
 });
-import { ContractResponse, ContractRequest, MemberRequest, TerminateRequest, LiquidationResponse } from '../types/contract';
+import { ContractResponse, ContractRequest, MemberRequest, TerminateRequest, LiquidationResponse, RoomRegistrationRequest, ContractRegistrationResponse, MyRoomResponse } from '../types/contract';
 
 export const contractService = {
     getContracts: async (status?: string): Promise<any> => {
@@ -27,6 +27,20 @@ export const contractService = {
     createContract: async (data: ContractRequest): Promise<any> => {
         const response = await api.post('/v1/contracts', data);
         return response.data;
+    },
+
+    register: async (data: RoomRegistrationRequest): Promise<ContractRegistrationResponse> => {
+        const response = await api.post('/v1/contracts/register', data);
+        return response.data.result;
+    },
+
+    getMyRoom: async (): Promise<MyRoomResponse> => {
+        const response = await api.get('/v1/my-room');
+        return response.data.result;
+    },
+
+    deleteContract: async (id: number): Promise<void> => {
+        await api.delete(`/v1/contracts/${id}`);
     },
 
     updateContract: async (id: number, data: Partial<ContractRequest>): Promise<any> => {

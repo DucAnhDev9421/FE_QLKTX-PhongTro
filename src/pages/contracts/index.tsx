@@ -51,6 +51,17 @@ export default function Contracts() {
         }
     });
 
+    const deleteContractMutation = useMutation({
+        mutationFn: (id: number) => contractService.deleteContract(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['contracts'] });
+            alert("Đã xóa hợp đồng thành công (Xóa mềm).");
+        },
+        onError: (err: any) => {
+            alert(err.response?.data?.message || 'Có lỗi xảy ra khi xóa hợp đồng.');
+        }
+    });
+
     const handleOpenCreate = () => {
         setEditContractData(null);
         setIsContractModalOpen(true);
@@ -86,6 +97,12 @@ export default function Contracts() {
         }
         if (window.confirm("Bạn có chắc muốn xóa thành viên này khỏi phòng?")) {
             removeMemberMutation.mutate({ contractId, tenantId });
+        }
+    };
+
+    const handleDeleteContract = (id: number) => {
+        if (window.confirm("Bạn có chắc chắn muốn xóa hợp đồng này? (Hành động này sẽ xóa mềm hợp đồng và giải phóng phòng nếu đang ở)")) {
+            deleteContractMutation.mutate(id);
         }
     };
 
@@ -281,6 +298,13 @@ export default function Contracts() {
                                                             <Trash2 size={16} />
                                                         </button>
                                                     )}
+                                                    <button 
+                                                        onClick={() => handleDeleteContract(contract.contractId)}
+                                                        className="p-1.5 text-slate-400 hover:text-red-500 transition-colors rounded-md hover:bg-slate-800"
+                                                        title="Xóa Hợp đồng (Xóa mềm)"
+                                                    >
+                                                        <Trash2 size={16} className="fill-current opacity-20 group-hover:opacity-100" />
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -331,6 +355,10 @@ function ContractStatusBadge({ status }: { status: string }) {
         case 'TERMINATED':
             styles = 'bg-slate-800 text-slate-400 border-slate-700';
             label = 'Đã thanh lý';
+            break;
+        case 'WAITING_DEPOSIT':
+            styles = 'bg-pink-500/10 text-pink-500 border-pink-500/20';
+            label = 'Chờ tiền cọc';
             break;
         default:
             styles = 'bg-slate-800 text-slate-400 border-slate-700';

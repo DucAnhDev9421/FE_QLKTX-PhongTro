@@ -6,10 +6,20 @@ import demoImg from '../../assets/demo.jpg';
 import avatarImg from '../../assets/man-avatar-png-image_6514640.png';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useQuery } from '@tanstack/react-query';
+import { contractService } from '../../services';
 
 export default function LandingPage() {
     const { theme, toggleTheme } = useTheme();
     const { user } = useAuth();
+    const { data: myRoomData } = useQuery({
+        queryKey: ['myRoom'],
+        queryFn: () => contractService.getMyRoom(),
+        enabled: !!user,
+    });
+
+    const hasRoom = !!(myRoomData?.room);
+
     const isAdminOrOwner = React.useMemo(() => {
         if (!user) return false;
         const roleStr = (user.role || '').toUpperCase();
@@ -46,6 +56,20 @@ export default function LandingPage() {
                         >
                             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
                         </button>
+
+                        {user && hasRoom && (
+                            <Link 
+                                to="/my-room" 
+                                className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all font-semibold text-sm ${
+                                    theme === 'dark' 
+                                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-500 hover:bg-amber-500/20' 
+                                    : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
+                                }`}
+                            >
+                                <Home size={16} />
+                                Phòng của tôi
+                            </Link>
+                        )}
 
                         {isAdminOrOwner && (
                             <Link 

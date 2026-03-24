@@ -42,28 +42,28 @@ export const invoiceService = {
         const response = await axios.get(INVOICE_API, {
             headers: getAuthHeaders()
         });
-        return response.data;
+        return response.data.result;
     },
 
     getInvoiceById: async (id: number): Promise<Invoice> => {
         const response = await axios.get(`${INVOICE_API}/${id}`, {
             headers: getAuthHeaders()
         });
-        return response.data;
+        return response.data.result;
     },
 
     createInvoice: async (payload: InvoiceRequest): Promise<Invoice> => {
         const response = await axios.post(INVOICE_API, payload, {
             headers: getAuthHeaders()
         });
-        return response.data;
+        return response.data.result;
     },
 
     updateInvoice: async (id: number, payload: InvoiceRequest): Promise<Invoice> => {
         const response = await axios.put(`${INVOICE_API}/${id}`, payload, {
             headers: getAuthHeaders()
         });
-        return response.data;
+        return response.data.result;
     },
 
     deleteInvoice: async (id: number): Promise<void> => {

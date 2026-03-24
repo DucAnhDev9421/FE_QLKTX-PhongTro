@@ -30,14 +30,12 @@ export default function BuildingModal({ building, onClose }: Props) {
         queryFn: () => userService.getUsers()
     });
 
-    const managers = (usersData?.result || []).filter((u: any) => 
-        u.role?.roleName === 'SCOPE_ADMIN' || 
-        u.role?.roleName === 'SCOPE_OWNER' || 
-        u.role?.roleName === 'SCOPE_STAFF' ||
-        u.roleName === 'SCOPE_ADMIN' ||
-        u.roleName === 'SCOPE_OWNER' ||
-        u.roleName === 'SCOPE_STAFF'
-    );
+    const managers = (usersData?.result || []).filter((u: any) => {
+        const rName = (u.roleName || u.role?.roleName || '').toUpperCase();
+        return rName === 'ADMIN' || rName === 'SCOPE_ADMIN' || 
+               rName === 'OWNER' || rName === 'SCOPE_OWNER' || 
+               rName === 'STAFF' || rName === 'SCOPE_STAFF';
+    });
 
     const mutation = useMutation({
         mutationFn: async (data: any) => {
@@ -176,7 +174,7 @@ export default function BuildingModal({ building, onClose }: Props) {
                                     <option value="" className="bg-slate-900 text-slate-500">-- Chưa phân bổ --</option>
                                     {!isLoadingUsers && managers.map((m: any) => (
                                         <option key={m.userId} value={m.userId} className="bg-slate-900 text-slate-200">
-                                            {m.fullName} ({m.username})
+                                            {m.fullName}
                                         </option>
                                     ))}
                                 </select>

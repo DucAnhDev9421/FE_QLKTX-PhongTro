@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { authService } from '../../services/auth';
-import { ArrowLeft, User, Phone, Mail, LogOut, Shield, KeyRound, Loader2, Home } from 'lucide-react';
+import { ArrowLeft, User, Phone, Mail, LogOut, Shield, KeyRound, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import avatarImg from '../../assets/man-avatar-png-image_6514640.png';
 
@@ -154,9 +154,6 @@ export default function MyProfile() {
                             </div>
 
                             <div className="pt-4 flex flex-col sm:flex-row gap-3">
-                                <button onClick={() => navigate('/my-room')} className="flex-1 bg-emerald-500 text-neutral-900 py-3 px-4 rounded-xl font-bold hover:bg-emerald-400 transition-colors shadow-lg text-center flex items-center justify-center gap-2">
-                                    <Home size={18} /> Phòng của tôi
-                                </button>
                                 <button onClick={handleOpenEdit} className="flex-1 bg-[#D4AF37] text-neutral-900 py-3 px-4 rounded-xl font-bold hover:bg-yellow-500 transition-colors shadow-lg text-center">
                                     Chỉnh sửa hồ sơ
                                 </button>

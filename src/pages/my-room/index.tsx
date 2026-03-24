@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { RefreshCw, AlertCircle, ArrowLeft } from 'lucide-react';
+import { RefreshCw, AlertCircle, ArrowLeft, CreditCard, FileText, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { contractService } from '../../services';
 import RoomOverviewCard from './components/RoomOverviewCard';
 import RoommatesList from './components/RoommatesList';
 import ServicesCard from './components/ServicesCard';
@@ -8,93 +9,178 @@ import RecentInvoices from './components/RecentInvoices';
 
 export default function MyRoom() {
     const navigate = useNavigate();
-    // MOCK DATA FOR NOW
-    const [isLoading, setIsLoading] = useState(true);
-    const [roomData, setRoomData] = useState<any>(null);
+    
+    const { data: apiData, isLoading, error } = useQuery({
+        queryKey: ['myRoom'],
+        queryFn: () => contractService.getMyRoom(),
+    });
 
-    useEffect(() => {
-        // Simulate API fetch delay
-        setTimeout(() => {
-            setRoomData({
-                roomName: "Phòng 101",
-                building: "Ký túc xá A",
-                floor: 1,
-                roomType: "Phòng 4 người (Bao trọn)",
-                status: "ACTIVE",
-                joinDate: "2023-09-01",
-                members: [
-                    { id: 1, name: "Nguyễn Văn A", phone: "0901234567", role: "Đại diện", joinDate: "2023-09-01" },
-                    { id: 2, name: "Trần Thị B", phone: "0912345678", role: "Thành viên", joinDate: "2023-09-01" },
-                    { id: 3, name: "Lê Văn C", phone: "0923456789", role: "Thành viên", joinDate: "2023-10-01" }
-                ],
-                services: [
-                    { id: 1, name: "Điện", type: "METERED", unit: "kWh", price: 3500 },
-                    { id: 2, name: "Nước", type: "FIXED_PER_USER", unit: "Người", price: 50000 },
-                    { id: 3, name: "Internet", type: "FIXED_PER_ROOM", unit: "Phòng", price: 100000 },
-                    { id: 4, name: "Rác", type: "FIXED_PER_ROOM", unit: "Phòng", price: 30000 }
-                ],
-                invoices: [
-                    { id: 1, month: 2, year: 2024, totalAmount: 4350000, status: "PENDING", dueDate: "2024-03-05" },
-                    { id: 2, month: 1, year: 2024, totalAmount: 4200000, status: "PAID", dueDate: "2024-02-05", momoOrderId: "INV-2-123" },
-                    { id: 3, month: 12, year: 2023, totalAmount: 4150000, status: "PAID", dueDate: "2024-01-05" }
-                ]
-            });
-            setIsLoading(false);
-        }, 1000);
-    }, []);
+    const roomData = apiData && apiData.room ? {
+        roomName: apiData.room.roomNumber,
+        building: apiData.room.buildingName,
+        floor: apiData.room.floorName,
+        roomType: apiData.room.roomTypeName,
+        status: apiData.room.currentStatus,
+        joinDate: apiData.contract?.startDate,
+        price: apiData.room.price,
+        members: (apiData.contract?.members || []).map((m: any) => ({
+            id: m.tenantId,
+            name: m.fullName,
+            phone: m.phoneNumber,
+            role: m.isRepresentative ? 'Đại diện' : 'Thành viên',
+            joinDate: apiData.contract?.startDate 
+        })),
+        services: (apiData.services || []).map((s: any) => ({
+            id: s.buildingServiceId,
+            name: s.serviceName,
+            type: 'FIXED', 
+            unit: s.unit,
+            price: s.unitPrice
+        })),
+        invoices: (apiData.recentInvoices || []).map((i: any) => ({
+            id: i.invoiceId,
+            month: i.month,
+            year: i.year,
+            totalAmount: i.totalAmount,
+            status: i.paymentStatus,
+            dueDate: i.dueDate
+        }))
+    } : null;
 
+    const formatCurrency = (amount: number) => new Intl.NumberFormat('vi-VN').format(amount);
+
+    // Loading state
     if (isLoading) {
         return (
-            <div className="flex h-full items-center justify-center p-8">
-                <div className="flex flex-col items-center">
-                    <RefreshCw className="h-8 w-8 animate-spin text-emerald-500 mb-4" />
-                    <p className="text-slate-400">Đang tải thông tin phòng...</p>
+            <div className="flex h-screen items-center justify-center bg-slate-950">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="relative">
+                        <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                            <RefreshCw className="h-7 w-7 animate-spin text-emerald-500" />
+                        </div>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-slate-300 font-medium">Đang tải thông tin</p>
+                        <p className="text-slate-600 text-sm mt-1">Vui lòng chờ trong giây lát...</p>
+                    </div>
                 </div>
             </div>
         );
     }
 
-    if (!roomData) {
+    // Error state
+    if (error) {
         return (
-            <div className="flex h-full items-center justify-center p-8">
-                <div className="flex flex-col items-center text-center max-w-md">
-                    <AlertCircle className="h-12 w-12 text-slate-500 mb-4" />
-                    <h2 className="text-xl font-semibold text-slate-200 mb-2">Chưa có thông tin phòng</h2>
-                    <p className="text-slate-400">
-                        Bạn hiện chưa được gán vào phòng nào, hoặc hợp đồng của bạn chưa bắt đầu. 
-                        Vui lòng liên hệ quản lý để biết thêm chi tiết.
+            <div className="flex h-screen items-center justify-center bg-slate-950">
+                <div className="flex flex-col items-center text-center max-w-sm px-6">
+                    <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-5">
+                        <AlertCircle className="h-8 w-8 text-red-400" />
+                    </div>
+                    <h2 className="text-xl font-bold text-slate-100 mb-2">Đã có lỗi xảy ra</h2>
+                    <p className="text-slate-500 text-sm leading-relaxed">
+                        Không thể tải thông tin phòng. Vui lòng thử lại sau hoặc liên hệ quản lý.
                     </p>
+                    <button 
+                        onClick={() => window.location.reload()}
+                        className="mt-6 px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl border border-slate-700 transition-all text-sm font-medium hover:border-slate-600"
+                    >
+                        Thử lại
+                    </button>
                 </div>
             </div>
         );
     }
+
+    // Empty state
+    if (!roomData) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-slate-950">
+                <div className="flex flex-col items-center text-center max-w-sm px-6">
+                    <div className="w-20 h-20 rounded-2xl bg-slate-800/50 flex items-center justify-center mb-5 border border-slate-700/50">
+                        <AlertCircle className="h-10 w-10 text-slate-600" />
+                    </div>
+                    <h2 className="text-xl font-bold text-slate-100 mb-2">Chưa có phòng</h2>
+                    <p className="text-slate-500 text-sm leading-relaxed">
+                        Bạn chưa được gán vào phòng nào, hoặc hợp đồng chưa bắt đầu. Liên hệ quản lý để biết thêm.
+                    </p>
+                    <button 
+                        onClick={() => navigate('/rooms')}
+                        className="mt-6 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-all text-sm font-semibold shadow-lg shadow-emerald-900/30"
+                    >
+                        Tìm phòng
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // Calculate quick stats
+    const totalPending = roomData.invoices.filter((i: any) => i.status !== 'PAID').reduce((sum: number, i: any) => sum + (i.totalAmount || 0), 0);
+    const pendingCount = roomData.invoices.filter((i: any) => i.status !== 'PAID').length;
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-300">
-            <div className="max-w-7xl mx-auto p-6 md:p-8 space-y-6 pb-12">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-                    <div className="flex items-center gap-4">
-                        <button 
-                            onClick={() => navigate(-1)}
-                            className="p-2 mr-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-100 transition-colors"
-                        >
-                            <ArrowLeft size={20} />
-                        </button>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-6 pb-16">
+                {/* Header */}
+                <div className="flex items-center gap-4 mb-2">
+                    <button 
+                        onClick={() => navigate(-1)}
+                        className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-100 hover:bg-slate-800 hover:border-slate-700 transition-all"
+                    >
+                        <ArrowLeft size={18} />
+                    </button>
+                    <div>
+                        <h1 className="text-2xl font-extrabold text-white tracking-tight">Phòng của tôi</h1>
+                        <p className="text-slate-500 text-sm mt-0.5">Quản lý không gian ở, dịch vụ và thanh toán</p>
+                    </div>
+                </div>
+
+                {/* Room Hero Card */}
+                <RoomOverviewCard room={roomData} />
+
+                {/* Quick Stats Row */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-sm">
+                        <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                            <FileText className="h-5 w-5 text-blue-400" />
+                        </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-slate-100 mb-1">Căn phòng của tôi</h1>
-                            <p className="text-slate-400 text-sm">Quản lý không gian ở, dịch vụ và biên lai thanh toán</p>
+                            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Tổng hóa đơn</p>
+                            <p className="text-lg font-bold text-slate-100">{roomData.invoices.length}</p>
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-sm">
+                        <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                            <CreditCard className="h-5 w-5 text-amber-400" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Chưa thanh toán</p>
+                            <p className="text-lg font-bold text-slate-100">
+                                {pendingCount > 0 ? `${formatCurrency(totalPending)} đ` : '0 đ'}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-900/60 border border-slate-800/80 backdrop-blur-sm">
+                        <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                            <Users className="h-5 w-5 text-purple-400" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Thành viên</p>
+                            <p className="text-lg font-bold text-slate-100">{roomData.members.length} người</p>
                         </div>
                     </div>
                 </div>
 
+                {/* Main Content Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Left Column (Main Info & Invoices) */}
-                    <div className="lg:col-span-2 space-y-6">
-                        <RoomOverviewCard room={roomData} />
+                    {/* Left Column: Invoices (takes 2 cols) */}
+                    <div className="lg:col-span-2">
                         <RecentInvoices invoices={roomData.invoices} />
                     </div>
 
-                    {/* Right Column (Roommates & Services) */}
+                    {/* Right Column: Members & Services */}
                     <div className="space-y-6">
                         <RoommatesList members={roomData.members} />
                         <ServicesCard services={roomData.services} />

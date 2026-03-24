@@ -4,14 +4,21 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Check, Compass, Home, MapPin, Shield, Wifi, Sun, Moon, Loader2, ChevronLeft, ChevronRight, Wind, Box, Utensils, ChefHat, Armchair, Bath, Coffee, Lock, Smartphone, Layout } from 'lucide-react';
 import demoImg from '../../assets/demo.jpg';
 import { useTheme } from '../../contexts/ThemeContext';
-import { roomService, configService } from '../../services';
+import { roomService, configService, contractService } from '../../services';
 import { useAuth } from '../../hooks/useAuth';
+import { format, addMonths } from 'date-fns';
+import { CreditCard, Wallet } from 'lucide-react';
 
 export default function RoomDetail() {
     const { id } = useParams();
     const { theme, toggleTheme } = useTheme();
     const { user, loading: authLoading } = useAuth();
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [isRegistering, setIsRegistering] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+    const [endDate, setEndDate] = useState(format(addMonths(new Date(), 6), 'yyyy-MM-dd'));
+    const [paymentMethod, setPaymentMethod] = useState<'MOMO' | 'CASH'>('MOMO');
 
     const { data: roomData, isLoading } = useQuery({
         queryKey: ['roomDetail', id],
@@ -78,6 +85,31 @@ export default function RoomDetail() {
         if (lowerName.includes('ban công')) return <Layout size={24} />;
         if (lowerName.includes('smart home')) return <Smartphone size={24} />;
         return <Check size={24} />;
+    };
+
+    const handleRegister = async () => {
+        if (!user) return;
+        setIsRegistering(true);
+        try {
+            const result = await contractService.register({
+                roomId: Number(id),
+                startDate,
+                endDate,
+                paymentMethod
+            });
+
+            if (result.payUrl) {
+                window.location.href = result.payUrl;
+            } else {
+                alert('Đăng ký thành công! Vui lòng liên hệ quản lý để thanh toán tiền cọc.');
+                setIsModalOpen(false);
+            }
+        } catch (error: any) {
+            console.error('Registration failed', error);
+            alert(error.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại sau.');
+        } finally {
+            setIsRegistering(false);
+        }
     };
 
     return (
@@ -311,17 +343,15 @@ export default function RoomDetail() {
                             </Link>
                         ) : (
                             <div className="space-y-4">
-                                <div className={`w-full py-3 rounded-xl font-bold text-lg text-center bg-[#D4AF37] text-neutral-900 shadow-[0_0_20px_rgba(212,175,55,0.4)]`}>
-                                    YÊU CẦU THUÊ PHÒNG
-                                </div>
+                                <button 
+                                    onClick={() => setIsModalOpen(true)}
+                                    className="w-full py-4 rounded-xl font-bold text-lg text-center bg-[#D4AF37] hover:bg-yellow-500 text-neutral-900 shadow-[0_0_20px_rgba(212,175,55,0.4)] hover:shadow-[0_0_30px_rgba(212,175,55,0.6)] transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Check size={24} /> ĐĂNG KÝ THUÊ NGAY
+                                </button>
                                 <div className={`p-4 rounded-xl border ${theme === 'dark' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-100' : 'bg-emerald-50 border-emerald-200 text-emerald-800'}`}>
-                                    <h4 className="font-semibold mb-2 flex items-center gap-2"><Check size={18} /> Hướng dẫn làm thủ tục</h4>
-                                    <ol className="list-decimal list-inside space-y-2 text-sm">
-                                        <li>Hoàn thiện thông tin & tải CCCD tại <b><Link to="/my-profile" className="underline font-medium hover:text-emerald-500">Hồ sơ cá nhân</Link></b></li>
-                                        <li>Liên hệ Ban Quản Lý (SĐT: <b>0865.736.253</b>)</li>
-                                        <li>Cung cấp mã tài khoản của bạn: <br /><span className="font-mono bg-black/20 px-2 py-1 rounded select-all ml-4 block mt-1">{user.username}</span></li>
-                                        <li>Quản lý sẽ tiến hành lập hợp đồng thuê.</li>
-                                    </ol>
+                                    <h4 className="font-semibold mb-2 flex items-center gap-2"><Check size={18} /> Thủ tục tự động</h4>
+                                    <p className="text-sm">Bạn có thể đăng ký và thanh toán tiền cọc ngay lập tức qua MoMo để giữ phòng.</p>
                                 </div>
                             </div>
                         )}
@@ -335,6 +365,104 @@ export default function RoomDetail() {
                 </div>
 
             </div>
+
+            {/* Registration Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className={`w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl transition-all scale-in-center ${theme === 'dark' ? 'bg-neutral-900 border border-neutral-800' : 'bg-white border border-neutral-200'}`}>
+                        <div className="p-8">
+                            <h2 className="text-2xl font-bold mb-2 flex items-center gap-3">
+                                <Home className="text-[#D4AF37]" /> Xác nhận thuê phòng
+                            </h2>
+                            <p className={`text-sm mb-8 ${theme === 'dark' ? 'text-neutral-400' : 'text-neutral-500'}`}>
+                                Vui lòng kiểm tra lại thông tin và chọn phương thức thanh toán tiền cọc.
+                            </p>
+
+                            <div className="space-y-6">
+                                {/* Date Selection */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className={`text-xs font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-neutral-500' : 'text-neutral-400'}`}>Ngày bắt đầu</label>
+                                        <input 
+                                            type="date" 
+                                            value={startDate}
+                                            onChange={(e) => setStartDate(e.target.value)}
+                                            className={`w-full p-3 rounded-xl border focus:ring-2 focus:ring-[#D4AF37] outline-none transition-all ${theme === 'dark' ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-900'}`}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className={`text-xs font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-neutral-500' : 'text-neutral-400'}`}>Ngày kết thúc (Dự kiến)</label>
+                                        <input 
+                                            type="date" 
+                                            value={endDate}
+                                            onChange={(e) => setEndDate(e.target.value)}
+                                            className={`w-full p-3 rounded-xl border focus:ring-2 focus:ring-[#D4AF37] outline-none transition-all ${theme === 'dark' ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-neutral-50 border-neutral-200 text-neutral-900'}`}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Payment Method */}
+                                <div className="space-y-3">
+                                    <label className={`text-xs font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-neutral-500' : 'text-neutral-400'}`}>Phương thức trả cọc</label>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <button 
+                                            onClick={() => setPaymentMethod('MOMO')}
+                                            className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all ${paymentMethod === 'MOMO' ? 'border-[#D4AF37] bg-[#D4AF37]/10' : 'border-neutral-700 hover:border-neutral-500 bg-transparent'}`}
+                                        >
+                                            <div className="p-2 rounded-lg bg-pink-500/20 text-pink-500">
+                                                <Wallet size={20} />
+                                            </div>
+                                            <div className="text-left font-bold">MoMo</div>
+                                        </button>
+                                        <button 
+                                            onClick={() => setPaymentMethod('CASH')}
+                                            className={`flex items-center gap-3 p-4 rounded-2xl border-2 transition-all ${paymentMethod === 'CASH' ? 'border-[#D4AF37] bg-[#D4AF37]/10' : 'border-neutral-700 hover:border-neutral-500 bg-transparent'}`}
+                                        >
+                                            <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-500">
+                                                <CreditCard size={20} />
+                                            </div>
+                                            <div className="text-left font-bold">Tiền mặt</div>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Summary */}
+                                <div className={`p-4 rounded-2xl ${theme === 'dark' ? 'bg-neutral-800' : 'bg-neutral-100'}`}>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-sm opacity-60">Tiền cọc cần thanh toán (1 tháng)</span>
+                                        <span className="font-bold text-lg">{formatPrice(room.price)}đ</span>
+                                    </div>
+                                    <div className="text-[10px] opacity-40 italic">
+                                        * Phí dịch vụ hàng tháng sẽ được tính riêng dựa trên mức sử dụng thực tế.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex border-t border-neutral-800">
+                            <button 
+                                onClick={() => setIsModalOpen(false)}
+                                className="flex-1 p-5 font-semibold text-neutral-400 hover:bg-neutral-800 hover:text-white transition-all"
+                            >
+                                Hủy bỏ
+                            </button>
+                            <button 
+                                onClick={handleRegister}
+                                disabled={isRegistering}
+                                className="flex-1 p-5 font-bold text-neutral-900 bg-[#D4AF37] hover:bg-yellow-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {isRegistering ? (
+                                    <>
+                                        <Loader2 size={20} className="animate-spin" /> Đang xử lý...
+                                    </>
+                                ) : (
+                                    'Xác nhận đăng kÝ'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

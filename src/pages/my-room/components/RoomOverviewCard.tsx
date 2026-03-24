@@ -1,4 +1,4 @@
-import { Home, MapPin, Calendar, Image as ImageIcon } from 'lucide-react';
+import { Home, MapPin, Calendar, Building2, Layers, DoorOpen } from 'lucide-react';
 
 interface RoomOverviewProps {
     room: {
@@ -12,37 +12,67 @@ interface RoomOverviewProps {
 }
 
 export default function RoomOverviewCard({ room }: RoomOverviewProps) {
+    const isActive = room.status === 'OCCUPIED' || room.status === 'ACTIVE';
+
     return (
-        <div className="bg-slate-800/50 backdrop-blur-md border border-slate-700/50 p-6 rounded-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+        <div className="relative rounded-2xl overflow-hidden">
+            {/* Background gradient */}
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/20 via-slate-900 to-cyan-600/10"></div>
+            <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/8 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-0 left-0 w-60 h-60 bg-cyan-500/5 rounded-full blur-3xl"></div>
             
-            <div className="relative z-10 flex flex-col md:flex-row gap-6 items-start md:items-center">
-                <div className="w-full md:w-56 h-36 rounded-xl bg-slate-700/50 border border-slate-600/50 flex items-center justify-center shrink-0 overflow-hidden relative group">
-                    <ImageIcon className="h-8 w-8 text-slate-500 group-hover:scale-110 transition-transform duration-300" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent"></div>
-                </div>
-                
-                <div className="flex-1 w-full">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 shadow-inner">
-                            <Home className="h-5 w-5 text-emerald-400" />
+            <div className="relative z-10 p-6 md:p-8">
+                {/* Top Row: Room Name + Status */}
+                <div className="flex items-start justify-between mb-6">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/25">
+                            <Home className="h-7 w-7 text-white" />
                         </div>
-                        <h2 className="text-2xl font-bold text-slate-100">{room.roomName}</h2>
-                        <span className="ml-auto md:ml-0 px-3 py-1 text-xs font-semibold tracking-wide rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase">
-                            Đang ở
-                        </span>
+                        <div>
+                            <h2 className="text-3xl font-extrabold text-white tracking-tight">{room.roomName}</h2>
+                            <p className="text-emerald-400/80 text-sm font-medium mt-0.5">{room.roomType}</p>
+                        </div>
                     </div>
                     
-                    <p className="text-slate-400 text-sm mb-5 font-medium">{room.roomType}</p>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-slate-700/30 border border-slate-600/30 text-sm text-slate-300">
-                            <MapPin className="h-4 w-4 text-emerald-400 shrink-0" />
-                            <span className="truncate">{room.building} - Tầng {room.floor}</span>
+                    <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border ${
+                        isActive 
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' 
+                        : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                    }`}>
+                        <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
+                        {isActive ? 'Đang ở' : 'Chờ xử lý'}
+                    </div>
+                </div>
+
+                {/* Info Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/8 transition-colors cursor-default">
+                        <div className="p-2 rounded-lg bg-blue-500/10">
+                            <Building2 className="h-4 w-4 text-blue-400" />
                         </div>
-                        <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-slate-700/30 border border-slate-600/30 text-sm text-slate-300">
-                            <Calendar className="h-4 w-4 text-blue-400 shrink-0" />
-                            <span className="truncate">T/gia: {room.joinDate}</span>
+                        <div>
+                            <p className="text-[11px] text-slate-500 uppercase tracking-wider font-medium">Tòa nhà</p>
+                            <p className="text-sm font-semibold text-slate-200">{room.building}</p>
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/8 transition-colors cursor-default">
+                        <div className="p-2 rounded-lg bg-purple-500/10">
+                            <Layers className="h-4 w-4 text-purple-400" />
+                        </div>
+                        <div>
+                            <p className="text-[11px] text-slate-500 uppercase tracking-wider font-medium">Tầng</p>
+                            <p className="text-sm font-semibold text-slate-200">{room.floor}</p>
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/8 transition-colors cursor-default">
+                        <div className="p-2 rounded-lg bg-emerald-500/10">
+                            <Calendar className="h-4 w-4 text-emerald-400" />
+                        </div>
+                        <div>
+                            <p className="text-[11px] text-slate-500 uppercase tracking-wider font-medium">Ngày vào</p>
+                            <p className="text-sm font-semibold text-slate-200">{room.joinDate || '---'}</p>
                         </div>
                     </div>
                 </div>

@@ -46,3 +46,29 @@ export interface LiquidationResponse {
     deductionReason: string;
     contractStatus: string;
 }
+
+export interface RoomRegistrationRequest {
+    roomId: number;
+    startDate: string;
+    endDate: string;
+    paymentMethod: 'MOMO' | 'CASH';
+}
+
+export interface ContractRegistrationResponse {
+    contract: ContractResponse;
+    depositInvoice: {
+        invoiceId: number;
+        totalAmount: number;
+        paymentStatus: string;
+        notes: string;
+    };
+    payUrl?: string;
+}
+
+export interface MyRoomResponse {
+    room: any; // RoomResponse
+    roommates: any[]; // TenantResponse[]
+    services: any[]; // BuildingServiceResponse[]
+    recentInvoices: any[]; // InvoiceResponse[]
+    contract: ContractResponse;
+}

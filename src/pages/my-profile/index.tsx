@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { authService } from '../../services/auth';
-import { ArrowLeft, User, Phone, Mail, LogOut, Shield, KeyRound, Loader2 } from 'lucide-react';
+import { ArrowLeft, User, Phone, Mail, LogOut, Shield, KeyRound, Loader2, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import avatarImg from '../../assets/man-avatar-png-image_6514640.png';
 
@@ -154,14 +154,23 @@ export default function MyProfile() {
                             </div>
 
                             <div className="pt-4 flex flex-col sm:flex-row gap-3">
+                                <button onClick={() => navigate('/my-room')} className="flex-1 bg-emerald-500 text-neutral-900 py-3 px-4 rounded-xl font-bold hover:bg-emerald-400 transition-colors shadow-lg text-center flex items-center justify-center gap-2">
+                                    <Home size={18} /> Phòng của tôi
+                                </button>
                                 <button onClick={handleOpenEdit} className="flex-1 bg-[#D4AF37] text-neutral-900 py-3 px-4 rounded-xl font-bold hover:bg-yellow-500 transition-colors shadow-lg text-center">
                                     Chỉnh sửa hồ sơ
                                 </button>
-                                <button onClick={handleOpenPass} className="flex-1 border border-white/20 text-neutral-300 py-3 px-4 rounded-xl font-semibold hover:bg-white/10 transition-colors flex items-center justify-center gap-2">
+                                <button onClick={handleOpenPass} className="flex-1 border border-white/20 text-neutral-300 py-3 px-4 rounded-xl font-semibold hover:bg-white/10 transition-colors flex items-center justify-center gap-2 hidden lg:flex">
                                     <KeyRound size={18} /> Đổi mật khẩu
                                 </button>
                                 <button onClick={logout} className="sm:w-auto w-full px-6 border border-white/20 text-red-400 py-3 rounded-xl font-semibold hover:bg-red-500/10 hover:border-red-500/50 transition-all flex items-center justify-center gap-2">
                                     <LogOut size={18} /> Đăng xuất
+                                </button>
+                            </div>
+                            {/* Mobile only password button */}
+                            <div className="flex lg:hidden w-full">
+                                <button onClick={handleOpenPass} className="w-full border border-white/20 text-neutral-300 py-3 px-4 rounded-xl font-semibold hover:bg-white/10 transition-colors flex items-center justify-center gap-2">
+                                    <KeyRound size={18} /> Đổi mật khẩu
                                 </button>
                             </div>
                         </div>

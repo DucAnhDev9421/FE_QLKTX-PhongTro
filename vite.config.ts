@@ -9,4 +9,8 @@ export default defineConfig({
             '@': path.resolve(__dirname, './src'),
         },
     },
+    server: {
+        allowedHosts: ['ducanh.nport.link'],
+        // Hoặc dùng: allowedHosts: true để cho phép tất cả các host
+    },
 });

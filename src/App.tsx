@@ -27,6 +27,7 @@ const Register = React.lazy(() => import('./pages/auth/register'));
 const MyProfile = React.lazy(() => import('./pages/my-profile'));
 const MyRoom = React.lazy(() => import('./pages/my-room'));
 const Assets = React.lazy(() => import('./pages/assets'));
+const PaymentResult = React.lazy(() => import('./pages/public/payment-result'));
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ function App() {
                             <Route path="/" element={<LandingPage />} />
                             <Route path="/phong-tro" element={<PublicRooms />} />
                             <Route path="/phong-tro/:id" element={<RoomDetail />} />
+                            <Route path="/payment-result" element={<PaymentResult />} />
                             <Route path="/login" element={<Login />} />
                             <Route path="/register" element={<Register />} />
                             <Route element={<ProtectedRoute />}>

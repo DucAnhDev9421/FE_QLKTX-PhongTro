@@ -84,7 +84,7 @@ export default function MyProfile() {
         setErrorMsg('');
         try {
             await authService.changePassword({
-                oldPassword: passForm.oldPassword,
+                currentPassword: passForm.oldPassword,
                 newPassword: passForm.newPassword
             });
             setSuccessMsg('Đổi mật khẩu thành công!');

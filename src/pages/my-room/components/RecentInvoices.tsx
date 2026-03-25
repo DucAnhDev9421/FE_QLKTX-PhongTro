@@ -1,4 +1,6 @@
-import { FileText, CreditCard, ChevronRight, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
+import { useState } from 'react';
+import { FileText, CreditCard, ChevronRight, CheckCircle2, Clock, AlertTriangle, Loader2 } from 'lucide-react';
+import { momoService } from '../../../services';
 
 interface Invoice {
     id: number;
@@ -14,12 +16,29 @@ interface RecentInvoicesProps {
 }
 
 export default function RecentInvoices({ invoices }: RecentInvoicesProps) {
+    const [loadingId, setLoadingId] = useState<number | null>(null);
+    const [errorId, setErrorId] = useState<number | null>(null);
+
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('vi-VN').format(amount);
     };
 
-    const handlePayment = (invoiceId: number) => {
-        alert(`Đang chuyển hướng đến MoMo để thanh toán hóa đơn #${invoiceId}...`);
+    const handlePayment = async (invoiceId: number) => {
+        setLoadingId(invoiceId);
+        setErrorId(null);
+        try {
+            const response = await momoService.createPayment(invoiceId);
+            if (response.payUrl) {
+                window.location.href = response.payUrl;
+            } else {
+                setErrorId(invoiceId);
+            }
+        } catch (error) {
+            console.error('MoMo payment error:', error);
+            setErrorId(invoiceId);
+        } finally {
+            setLoadingId(null);
+        }
     };
 
     const getStatusConfig = (status: string) => {
@@ -101,13 +120,20 @@ export default function RecentInvoices({ invoices }: RecentInvoicesProps) {
                                     </div>
                                     
                                     {invoice.status === 'PENDING' && (
-                                        <button 
-                                            onClick={() => handlePayment(invoice.id)}
-                                            className="px-4 py-2.5 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-pink-900/30 hover:shadow-pink-900/50 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
-                                        >
-                                            <CreditCard className="h-3.5 w-3.5" />
-                                            Thanh toán
-                                        </button>
+                                        <div className="flex flex-col items-end gap-1">
+                                            <button 
+                                                onClick={() => handlePayment(invoice.id)}
+                                                disabled={loadingId === invoice.id}
+                                                className="px-4 py-2.5 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-pink-900/30 hover:shadow-pink-900/50 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
+                                            >
+                                                {loadingId === invoice.id
+                                                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Đang xử lý...</>
+                                                    : <><CreditCard className="h-3.5 w-3.5" /> Thanh toán</>}
+                                            </button>
+                                            {errorId === invoice.id && (
+                                                <span className="text-[11px] text-rose-400">Lỗi kết nối, thử lại</span>
+                                            )}
+                                        </div>
                                     )}
                                     
                                     {invoice.status === 'PAID' && (

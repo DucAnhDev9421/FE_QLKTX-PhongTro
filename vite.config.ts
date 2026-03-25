@@ -10,7 +10,6 @@ export default defineConfig({
         },
     },
     server: {
-        allowedHosts: ['ducanh.nport.link'],
-        // Hoặc dùng: allowedHosts: true để cho phép tất cả các host
+        allowedHosts: true
     },
 });

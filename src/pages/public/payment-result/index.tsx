@@ -1,11 +1,16 @@
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { CheckCircle, XCircle, ArrowRight, Home, RefreshCcw } from 'lucide-react';
+import { CheckCircle, XCircle, ArrowRight, Home, RefreshCcw, Loader2 } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { momoService } from '../../../services';
 
 export default function PaymentResult() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const { theme } = useTheme();
+    const queryClient = useQueryClient();
+    const [isSyncing, setIsSyncing] = useState(false);
 
     const resultCode = searchParams.get('resultCode');
     const orderId = searchParams.get('orderId');
@@ -14,6 +19,26 @@ export default function PaymentResult() {
     const transId = searchParams.get('transId');
 
     const isSuccess = resultCode === '0';
+
+    useEffect(() => {
+        // Nếu MoMo báo thành công, ta gọi thêm API Query lên Backend của mình 
+        // để chắc chắn Backend đã cập nhật trạng thái PAID vào DB (phòng hờ IPN bị chậm)
+        if (isSuccess && orderId) {
+            const syncStatus = async () => {
+                setIsSyncing(true);
+                try {
+                    await momoService.queryStatus(orderId);
+                    // Sau khi sync xong thì invalidate cache luôn
+                    queryClient.invalidateQueries({ queryKey: ['myRoom'] });
+                } catch (error) {
+                    console.error('Failed to sync payment status:', error);
+                } finally {
+                    setIsSyncing(false);
+                }
+            };
+            syncStatus();
+        }
+    }, [isSuccess, orderId, queryClient]);
 
     const formatCurrency = (val: string | null) => {
         if (!val) return '0';
@@ -42,12 +67,19 @@ export default function PaymentResult() {
                     </div>
 
                     <h1 className="text-3xl font-extrabold mb-2 tracking-tight">
-                        {isSuccess ? 'Thanh toán thành công' : 'Thanh toán thất bại'}
+                        {isSyncing ? 'Đang xác thực...' : (isSuccess ? 'Thanh toán thành công' : 'Thanh toán thất bại')}
                     </h1>
                     <p className={`mb-8 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
-                        {isSuccess 
-                            ? 'Cảm ơn bạn. Giao dịch đã được hệ thống ghi nhận thành công.' 
-                            : message || 'Đã có lỗi xảy ra trong quá trình xử lý giao dịch. Vui lòng thử lại.'}
+                        {isSyncing ? (
+                            <span className="flex items-center gap-2 justify-center">
+                                <Loader2 className="h-4 w-4 animate-spin" /> 
+                                Vui lòng chờ trong giây lát...
+                            </span>
+                        ) : (
+                            isSuccess 
+                                ? 'Cảm ơn bạn. Giao dịch đã được hệ thống ghi nhận thành công.' 
+                                : message || 'Đã có lỗi xảy ra trong quá trình xử lý giao dịch. Vui lòng thử lại.'
+                        )}
                     </p>
 
                     <div className={`w-full p-6 rounded-2xl mb-8 space-y-4 text-left ${
@@ -72,7 +104,10 @@ export default function PaymentResult() {
                     <div className="w-full space-y-3">
                         {isSuccess ? (
                             <button 
-                                onClick={() => navigate('/my-room')}
+                                onClick={() => {
+                                    queryClient.invalidateQueries({ queryKey: ['myRoom'] });
+                                    navigate('/my-room');
+                                }}
                                 className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold transition-all shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2"
                             >
                                 <Home size={18} /> VỀ PHÒNG CỦA TÔI

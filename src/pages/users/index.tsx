@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Layout } from '../../components/layout';
-import { Search, Filter, Plus, ShieldCheck, Shield, UserCog, User as UserIcon, Lock, Unlock, Edit, Loader2 } from 'lucide-react';
+import { Search, Plus, ShieldCheck, Shield, UserCog, User as UserIcon, Lock, Unlock, Edit, Trash2 } from 'lucide-react';
 import UserModal from './components/UserModal';
 import { userService } from '../../services/user';
 import ConfirmModal from '../../components/ui/ConfirmModal';
@@ -23,6 +23,7 @@ const RoleBadge = ({ role }: { role: string }) => {
 
 export default function Users() {
     const [searchTerm, setSearchTerm] = useState('');
+    const [roleFilter, setRoleFilter] = useState('ALL');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
     
@@ -39,10 +40,24 @@ export default function Users() {
         queryFn: () => userService.getUsers()
     });
 
+    const { data: rolesData } = useQuery({
+        queryKey: ['roles'],
+        queryFn: () => userService.getRoles()
+    });
+
     const users = responseData?.result || [];
+    const roles: any[] = rolesData?.result || [];
 
     const toggleStatusMutation = useMutation({
         mutationFn: ({ id, isActive }: { id: string | number, isActive: boolean }) => userService.updateUserStatus(id, isActive),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['users'] });
+            setConfirmDialog({ isOpen: false, config: null });
+        }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: string | number) => userService.deleteUser(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['users'] });
             setConfirmDialog({ isOpen: false, config: null });
@@ -75,11 +90,27 @@ export default function Users() {
         });
     };
 
-    const filteredUsers = users.filter((u: any) => 
-        (u.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (u.username || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (u.email || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const handleDelete = (e: React.MouseEvent, user: any) => {
+        e.stopPropagation();
+        setConfirmDialog({
+            isOpen: true,
+            config: {
+                title: 'Xóa tài khoản',
+                message: `Bạn có chắc chắn muốn XÓA tài khoản "${user.username}"? Thao tác này không thể hoàn tác.`,
+                type: 'danger',
+                confirmText: 'Xóa',
+                onConfirm: () => deleteMutation.mutate(user.userId)
+            }
+        });
+    };
+
+    const filteredUsers = users.filter((u: any) => {
+        const matchSearch = (u.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (u.username || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (u.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchRole = roleFilter === 'ALL' || (u.roleName || '').toUpperCase() === roleFilter.toUpperCase();
+        return matchSearch && matchRole;
+    });
 
     return (
         <Layout>
@@ -107,13 +138,22 @@ export default function Users() {
                         className="w-full bg-black/40 border border-white/10 text-slate-200 rounded-xl pl-11 pr-4 py-2.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all text-sm placeholder:text-slate-500"
                     />
                 </div>
-                <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-                    <button className="flex items-center gap-2 bg-black/40 border border-white/10 hover:border-white/20 hover:bg-white/5 text-slate-300 px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap">
-                        <Filter size={16} /> Nhóm quyền
+                <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+                    <button
+                        onClick={() => setRoleFilter('ALL')}
+                        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap border ${roleFilter === 'ALL' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-black/40 text-slate-400 border-white/10 hover:border-white/20'}`}
+                    >
+                        Tất cả
                     </button>
-                    <button className="flex items-center gap-2 bg-black/40 border border-white/10 hover:border-white/20 hover:bg-white/5 text-slate-300 px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap">
-                        <Filter size={16} /> Trạng thái
-                    </button>
+                    {roles.map((r: any) => (
+                        <button
+                            key={r.roleId}
+                            onClick={() => setRoleFilter(r.roleName.toUpperCase())}
+                            className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap border ${roleFilter === r.roleName.toUpperCase() ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-black/40 text-slate-400 border-white/10 hover:border-white/20'}`}
+                        >
+                            {r.roleName}
+                        </button>
+                    ))}
                 </div>
             </div>
 
@@ -189,13 +229,22 @@ export default function Users() {
                                             <div className="flex items-center justify-end gap-1 opacity-0 md:opacity-100 transition-opacity">
                                                 <button 
                                                     onClick={(e) => toggleLock(e, user)}
-                                                    disabled={toggleStatusMutation.isPending && confirmDialog.config?.confirmText.includes(user.isActive ? 'Khóa' : 'Mở')}
+                                                    disabled={toggleStatusMutation.isPending}
                                                     title={user.isActive ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
                                                     className={`p-2 rounded-lg transition-colors ${user.isActive ? 'text-slate-400 hover:text-amber-500 hover:bg-amber-500/10' : 'text-slate-500 hover:text-emerald-500 hover:bg-emerald-500/10'} disabled:opacity-50`}>
-                                                    {toggleStatusMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : (user.isActive ? <Lock size={18} /> : <Unlock size={18} />)}
+                                                    {user.isActive ? <Lock size={18} /> : <Unlock size={18} />}
                                                 </button>
-                                                <button className="text-slate-400 hover:text-emerald-500 p-2 rounded-lg hover:bg-emerald-500/10 transition-colors">
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); handleEdit(user); }}
+                                                    title="Chỉnh sửa"
+                                                    className="text-slate-400 hover:text-emerald-500 p-2 rounded-lg hover:bg-emerald-500/10 transition-colors">
                                                     <Edit size={18} />
+                                                </button>
+                                                <button 
+                                                    onClick={(e) => handleDelete(e, user)}
+                                                    title="Xóa tài khoản"
+                                                    className="text-slate-400 hover:text-rose-500 p-2 rounded-lg hover:bg-rose-500/10 transition-colors">
+                                                    <Trash2 size={18} />
                                                 </button>
                                             </div>
                                         </td>

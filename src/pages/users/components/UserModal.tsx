@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ShieldCheck, KeyRound, Loader2 } from 'lucide-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { userService } from '../../../services/user';
 import Alert from '../../../components/ui/Alert';
 
@@ -20,10 +20,18 @@ export default function UserModal({ user, onClose }: Props) {
         fullName: user?.fullName || '',
         email: user?.email || '',
         phoneNumber: user?.phoneNumber || '',
-        roleName: user?.roleName || user?.role?.roleName || user?.role || 'STAFF'
+        roleName: user?.roleName || user?.role?.roleName || user?.role || 'Staff'
     });
 
     const [errorMsg, setErrorMsg] = useState('');
+    const [successMsg, setSuccessMsg] = useState('');
+
+    // Fetch roles from API
+    const { data: rolesData } = useQuery({
+        queryKey: ['roles'],
+        queryFn: () => userService.getRoles(),
+    });
+    const roles: any[] = rolesData?.result || [];
 
     const createMutation = useMutation({
         mutationFn: (data: any) => userService.createUser(data),
@@ -32,18 +40,34 @@ export default function UserModal({ user, onClose }: Props) {
             onClose();
         },
         onError: (err: any) => {
-            setErrorMsg(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật người dùng.');
+            setErrorMsg(err.response?.data?.message || 'Có lỗi xảy ra khi tạo người dùng.');
+        }
+    });
+
+    const updateMutation = useMutation({
+        mutationFn: (data: any) => userService.updateUser(user.userId, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['users'] });
+            setSuccessMsg('Cập nhật thông tin thành công!');
+            setTimeout(() => onClose(), 1000);
+        },
+        onError: (err: any) => {
+            setErrorMsg(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật.');
         }
     });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setErrorMsg('');
-        
+        setSuccessMsg('');
+
         if (isEdit) {
-            // Because the backend doesn't support full PUT yet, we just close it for now.
-            // When PUT is supported, we would call updateMutation here.
-            onClose();
+            updateMutation.mutate({
+                fullName: formData.fullName,
+                email: formData.email,
+                phoneNumber: formData.phoneNumber,
+                roleName: formData.roleName,
+            });
             return;
         }
 
@@ -60,6 +84,8 @@ export default function UserModal({ user, onClose }: Props) {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const isSubmitting = createMutation.isPending || updateMutation.isPending;
+
     return createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 font-sans">
             <div 
@@ -70,7 +96,7 @@ export default function UserModal({ user, onClose }: Props) {
             <div className="relative bg-slate-900 border border-white/10 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden transform transition-all">
                 <div className="flex items-center justify-between p-5 border-b border-white/5 shrink-0 bg-slate-900">
                     <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                        {isEdit ? 'Hồ sơ Nhân sự' : 'Cấp tài khoản mới'}
+                        {isEdit ? 'Chỉnh sửa Nhân sự' : 'Cấp tài khoản mới'}
                         {isEdit && <span className="px-2 py-0.5 rounded text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">ID: {user.userId}</span>}
                     </h2>
                     <button 
@@ -84,9 +110,8 @@ export default function UserModal({ user, onClose }: Props) {
                     {errorMsg && (
                         <Alert type="error" message={errorMsg} />
                     )}
-
-                    {isEdit && (
-                        <Alert type="info" message="Chức năng sửa thông tin hiện đang ở dạng xem trước." />
+                    {successMsg && (
+                        <Alert type="success" message={successMsg} />
                     )}
 
                     {/* Basic Info */}
@@ -99,9 +124,8 @@ export default function UserModal({ user, onClose }: Props) {
                                     name="fullName"
                                     value={formData.fullName}
                                     onChange={handleChange}
-                                    readOnly={isEdit}
                                     placeholder="Điền họ tên người dùng..."
-                                    className="w-full bg-black/40 border border-white/10 text-sm text-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all placeholder:text-slate-600 readOnly:opacity-70"
+                                    className="w-full bg-black/40 border border-white/10 text-sm text-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all placeholder:text-slate-600"
                                 />
                             </div>
                             <div>
@@ -111,9 +135,8 @@ export default function UserModal({ user, onClose }: Props) {
                                     name="email"
                                     value={formData.email}
                                     onChange={handleChange}
-                                    readOnly={isEdit}
                                     placeholder="email@example.com"
-                                    className="w-full bg-black/40 border border-white/10 text-sm text-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all placeholder:text-slate-600 readOnly:opacity-70"
+                                    className="w-full bg-black/40 border border-white/10 text-sm text-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all placeholder:text-slate-600"
                                 />
                             </div>
                         </div>
@@ -126,9 +149,8 @@ export default function UserModal({ user, onClose }: Props) {
                                     name="phoneNumber"
                                     value={formData.phoneNumber}
                                     onChange={handleChange}
-                                    readOnly={isEdit}
                                     placeholder="09xx..."
-                                    className="w-full bg-black/40 border border-white/10 text-sm text-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all placeholder:text-slate-600 font-mono readOnly:opacity-70"
+                                    className="w-full bg-black/40 border border-white/10 text-sm text-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all placeholder:text-slate-600 font-mono"
                                 />
                             </div>
                             <div>
@@ -137,21 +159,27 @@ export default function UserModal({ user, onClose }: Props) {
                                     name="roleName"
                                     value={formData.roleName}
                                     onChange={handleChange}
-                                    disabled={isEdit}
-                                    className="w-full bg-black/40 focus:bg-slate-900 text-emerald-400 border border-emerald-500/30 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all font-semibold uppercase disabled:opacity-70 disabled:cursor-not-allowed appearance-none"
+                                    className="w-full bg-black/40 focus:bg-slate-900 text-emerald-400 border border-emerald-500/30 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all font-semibold uppercase appearance-none"
                                 >
-                                    <option value="OWNER" className="bg-slate-900 text-slate-200">Owner (Chủ hệ thống)</option>
-                                    <option value="ADMIN" className="bg-slate-900 text-slate-200">Admin (Quản trị viên)</option>
-                                    <option value="STAFF" className="bg-slate-900 text-slate-200">Staff (Nhân viên)</option>
-                                    <option value="TENANT" className="bg-slate-900 text-slate-200">Tenant (Người thuê trọ)</option>
-                                    <option value="USER" className="bg-slate-900 text-slate-200">User (Khách)</option>
+                                    {roles.length > 0 ? roles.map((r: any) => (
+                                        <option key={r.roleId} value={r.roleName} className="bg-slate-900 text-slate-200">
+                                            {r.roleName} {r.description ? `(${r.description})` : ''}
+                                        </option>
+                                    )) : (
+                                        <>
+                                            <option value="Owner" className="bg-slate-900 text-slate-200">Owner (Chủ hệ thống)</option>
+                                            <option value="Admin" className="bg-slate-900 text-slate-200">Admin (Quản trị viên)</option>
+                                            <option value="Staff" className="bg-slate-900 text-slate-200">Staff (Nhân viên)</option>
+                                            <option value="Tenant" className="bg-slate-900 text-slate-200">Tenant (Người thuê trọ)</option>
+                                        </>
+                                    )}
                                 </select>
                             </div>
                         </div>
                     </div>
 
                     <div className="border border-white/5 rounded-2xl p-5 bg-black/20 shadow-inner">
-                        <label className="block text-sm font-medium text-amber-500 mb-3 flex items-center gap-1.5 text-left"><KeyRound size={16}/> Thông tin Tín thức (Đăng nhập)</label>
+                        <label className="block text-sm font-medium text-amber-500 mb-3 flex items-center gap-1.5 text-left"><KeyRound size={16}/> Thông tin Đăng nhập</label>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
                             <div>
                                 <label className="block text-xs font-medium text-slate-400 mb-1.5">Tên đăng nhập (Username) <span className="text-rose-500">*</span></label>
@@ -168,16 +196,15 @@ export default function UserModal({ user, onClose }: Props) {
                                 {isEdit && <span className="text-[10px] text-slate-500 mt-1 block">Tên đăng nhập là định danh, không thể thay đổi.</span>}
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-slate-400 mb-1.5">{isEdit ? 'Mật khẩu' : 'Mật khẩu khởi tạo'} {(!isEdit) && <span className="text-rose-500">*</span>}</label>
+                                <label className="block text-xs font-medium text-slate-400 mb-1.5">{isEdit ? 'Mật khẩu mới (để trống nếu không đổi)' : 'Mật khẩu khởi tạo'} {(!isEdit) && <span className="text-rose-500">*</span>}</label>
                                 <input 
                                     type="password" 
                                     name="password"
                                     value={formData.password}
                                     onChange={handleChange}
-                                    disabled={isEdit}
                                     autoComplete="new-password"
-                                    placeholder={isEdit ? 'Đã thiết lập (Ẩn)' : 'Nhập mật khẩu...'}
-                                    className="w-full bg-slate-900/50 border border-white/10 text-sm text-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono placeholder:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed [&:-webkit-autofill]:[-webkit-box-shadow:0_0_0_30px_#0f172a_inset] [&:-webkit-autofill]:[-webkit-text-fill-color:white]"
+                                    placeholder={isEdit ? '••••••••' : 'Nhập mật khẩu...'}
+                                    className="w-full bg-slate-900/50 border border-white/10 text-sm text-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono placeholder:text-slate-600 [&:-webkit-autofill]:[-webkit-box-shadow:0_0_0_30px_#0f172a_inset] [&:-webkit-autofill]:[-webkit-text-fill-color:white]"
                                 />
                             </div>
                         </div>
@@ -189,19 +216,19 @@ export default function UserModal({ user, onClose }: Props) {
                         onClick={onClose}
                         type="button"
                         className="px-5 py-2.5 text-sm font-medium text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all">
-                        Đóng
+                        Hủy
                     </button>
                     <button 
                         onClick={handleSubmit}
-                        disabled={createMutation.isPending}
+                        disabled={isSubmitting}
                         className="px-5 py-2.5 flex items-center gap-2 text-sm font-semibold text-emerald-950 bg-emerald-500 hover:bg-emerald-400 rounded-xl transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_20px_rgba(16,185,129,0.5)] disabled:opacity-70 disabled:cursor-not-allowed">
-                        {createMutation.isPending ? (
+                        {isSubmitting ? (
                             <>
                                 <Loader2 size={16} className="animate-spin" />
                                 Đang xử lý...
                             </>
                         ) : (
-                            isEdit ? 'Đóng (Chỉ xem)' : 'Tạo Tài khoản'
+                            isEdit ? 'Lưu thay đổi' : 'Tạo Tài khoản'
                         )}
                     </button>
                 </div>

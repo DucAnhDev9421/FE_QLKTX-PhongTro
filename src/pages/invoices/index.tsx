@@ -1,9 +1,13 @@
 import { useState, useMemo } from 'react';
 import { Layout } from '../../components/layout';
-import { Search, Filter, Plus, FileText, CheckCircle2, AlertCircle, Clock, Send, MoreVertical, Download, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, FileText, CheckCircle2, AlertCircle, Clock, Send, MoreVertical, Download, Loader2, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import InvoiceModal from './components/InvoiceModal';
 import { useQuery } from '@tanstack/react-query';
 import { invoiceService, Invoice } from '../../services/invoice';
+import { buildingService } from '../../services/building';
+// @ts-ignore
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 const StatusBadge = ({ status }: { status: string }) => {
     switch (status) {
@@ -40,10 +44,32 @@ export default function Invoices() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
 
-    // Fetch invoices from BE
+    // Filter states
+    const [selectedBuilding, setSelectedBuilding] = useState<string>('');
+    const [selectedStatus, setSelectedStatus] = useState<string>('');
+    const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+
+    // Extract month/year from selectedDate
+    const selectedMonth = selectedDate ? selectedDate.getMonth() + 1 : undefined;
+    const selectedYear = selectedDate ? selectedDate.getFullYear() : undefined;
+
+    // Fetch buildings for filter
+    const { data: buildingsData } = useQuery({
+        queryKey: ['buildings-simple'],
+        queryFn: () => buildingService.getBuildings()
+    });
+    const buildings = buildingsData?.result || [];
+
+    // Fetch invoices from BE with filters
     const { data: pageResult, isLoading } = useQuery({
-        queryKey: ['invoices', page],
-        queryFn: () => invoiceService.getInvoices(page, 10)
+        queryKey: ['invoices', page, selectedBuilding, selectedStatus, selectedMonth, selectedYear, searchTerm],
+        queryFn: () => invoiceService.getInvoices(page, 10, {
+            buildingId: selectedBuilding ? parseInt(selectedBuilding) : undefined,
+            status: selectedStatus || undefined,
+            month: selectedMonth,
+            year: selectedYear,
+            roomNumber: searchTerm || undefined
+        })
     });
 
     const invoices: Invoice[] = pageResult?.data || [];
@@ -58,15 +84,8 @@ export default function Invoices() {
         setIsModalOpen(true);
     };
 
-    // Derived states
-    const filteredInvoices = useMemo(() => {
-        return invoices.filter((inv) => {
-             const searchLower = searchTerm.toLowerCase();
-             const matchRoom = inv.contract?.room?.roomNumber?.toLowerCase().includes(searchLower);
-             const matchInvId = String(inv.invoiceId).includes(searchLower);
-             return matchRoom || matchInvId;
-        });
-    }, [invoices, searchTerm]);
+    // Derived states - since BE handles filtering, we just use the data
+    const filteredInvoices = invoices;
 
     const stats = useMemo(() => {
         let totalAmount = 0;
@@ -76,13 +95,10 @@ export default function Invoices() {
         let overdueAmount = 0;
         let overdueCount = 0;
 
-        // Note: Stats are based on the CURRENT PAGE data because we changed to backend pagination.
-        // For accurate total stats, we might need a separate total stats API.
-        // But for now, we'll keep it simple.
         invoices.forEach((inv) => {
             totalAmount += inv.totalAmount || 0;
             totalCount++;
-            if (inv.paymentStatus === 'PENDING') {
+            if (inv.paymentStatus === 'PENDING' || inv.paymentStatus === 'UNPAID') {
                 unpaidAmount += inv.totalAmount || 0;
                 unpaidCount++;
             } else if (inv.paymentStatus === 'OVERDUE') {
@@ -123,7 +139,7 @@ export default function Invoices() {
                         <FileText size={24} />
                     </div>
                     <div>
-                        <p className="text-slate-400 text-sm font-medium mb-0.5">Tổng hóa đơn (Tất cả)</p>
+                        <p className="text-slate-400 text-sm font-medium mb-0.5">Tổng hóa đơn (Trang này)</p>
                         <h3 className="text-xl font-bold text-slate-100">{stats.totalAmount.toLocaleString()}đ <span className="text-sm font-normal text-slate-500">({stats.totalCount} HĐ)</span></h3>
                     </div>
                 </div>
@@ -148,26 +164,65 @@ export default function Invoices() {
             </div>
 
             {/* Filters & Search */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-lg p-4 mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
-                <div className="relative w-full md:w-96">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Tìm theo mã HĐ, số phòng..."
-                        className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-sm"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-                <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-                    <button className="flex items-center gap-2 bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-300 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
-                        <Filter size={16} />
-                        Kỳ cước
-                    </button>
-                    <button className="flex items-center gap-2 bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-300 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
-                        <Filter size={16} />
-                        Trạng thái
-                    </button>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-lg p-5 mb-6">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-end">
+                    <div className="lg:col-span-1">
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Tìm kiếm</label>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                            <input
+                                type="text"
+                                placeholder="Số phòng..."
+                                className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-sm"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Tòa nhà</label>
+                        <select 
+                            value={selectedBuilding}
+                            onChange={(e) => setSelectedBuilding(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-emerald-500 text-sm appearance-none cursor-pointer"
+                        >
+                            <option value="">Tất cả tòa nhà</option>
+                            {buildings.map((b: any) => (
+                                <option key={b.buildingId} value={b.buildingId}>{b.buildingName}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Kỳ cước (Tháng / Năm)</label>
+                        <div className="relative">
+                            <DatePicker
+                                selected={selectedDate}
+                                onChange={(date: Date | null) => setSelectedDate(date)}
+                                dateFormat="MM/yyyy"
+                                showMonthYearPicker
+                                className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:border-emerald-500 text-sm cursor-pointer"
+                                placeholderText="Chọn kỳ..."
+                                isClearable
+                            />
+                            <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" size={18} />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Trạng thái</label>
+                        <select 
+                            value={selectedStatus}
+                            onChange={(e) => setSelectedStatus(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-800 text-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-emerald-500 text-sm appearance-none cursor-pointer"
+                        >
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="PAID">Đã thanh toán</option>
+                            <option value="PENDING">Chưa thanh toán</option>
+                            <option value="OVERDUE">Quá hạn</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 

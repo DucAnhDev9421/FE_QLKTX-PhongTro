@@ -16,7 +16,7 @@ export interface Invoice {
     createdDate: string;
     dueDate: string;
     totalAmount: number;
-    paymentStatus: 'PENDING' | 'PAID' | 'OVERDUE';
+    paymentStatus: 'PENDING' | 'PAID' | 'OVERDUE' | 'UNPAID';
     notes: string;
 }
 
@@ -46,8 +46,26 @@ const getAuthHeaders = () => {
 };
 
 export const invoiceService = {
-    getInvoices: async (page: number = 0, size: number = 10): Promise<PageResponse<Invoice>> => {
-        const response = await axios.get(`${INVOICE_API}?page=${page}&size=${size}`, {
+    getInvoices: async (
+        page: number = 0, 
+        size: number = 10,
+        filters?: {
+            month?: number;
+            year?: number;
+            status?: string;
+            buildingId?: number;
+            roomNumber?: string;
+        }
+    ): Promise<PageResponse<Invoice>> => {
+        let url = `${INVOICE_API}?page=${page}&size=${size}`;
+        if (filters) {
+            if (filters.month) url += `&month=${filters.month}`;
+            if (filters.year) url += `&year=${filters.year}`;
+            if (filters.status) url += `&status=${filters.status}`;
+            if (filters.buildingId) url += `&buildingId=${filters.buildingId}`;
+            if (filters.roomNumber) url += `&roomNumber=${encodeURIComponent(filters.roomNumber)}`;
+        }
+        const response = await axios.get(url, {
             headers: getAuthHeaders()
         });
         return response.data.result;

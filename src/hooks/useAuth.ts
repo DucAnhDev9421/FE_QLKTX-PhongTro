@@ -1,65 +1,68 @@
-import { useState, useEffect } from 'react';
 import { authService, decodeToken } from '../services/auth';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export interface User {
     id: number;
-    userId: number; // Thêm userId từ backend
+    userId: number;
     username: string;
     role?: string;
     roles?: string[];
     tenantId?: number;
-    fullName?: string; // Thêm fullName
+    fullName?: string;
     [key: string]: any;
 }
 
 export function useAuth() {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
+    const token = localStorage.getItem('token');
 
-    useEffect(() => {
-        const fetchUser = async () => {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                setLoading(false);
-                return;
-            }
-
+    const { data: user, isLoading: loading, error } = useQuery({
+        queryKey: ['auth', 'me'],
+        queryFn: async () => {
+            if (!token) return null;
+            
             try {
                 const data = await authService.getMe();
-                // Depending on the backend ApiResponse format, user might be in data.result or data itself
+                // Handle different response formats
                 const userData = data?.result || data?.data || data;
                 
-                // Trực tiếp lấy role từ JWT token vì back-end không trả về trong getMe
+                // Augment with role from token
                 const decoded = decodeToken(token);
                 if (decoded && decoded.scope) {
                     userData.role = decoded.scope;
                 }
                 
-                // Đồng bộ id và userId
+                // Sync IDs
                 if (userData.userId && !userData.id) {
                     userData.id = userData.userId;
                 }
                 
-                setUser(userData);
-            } catch (error) {
-                console.error('Failed to fetch user', error);
+                return userData as User;
+            } catch (err) {
                 localStorage.removeItem('token');
-                setUser(null);
-            } finally {
-                setLoading(false);
+                throw err;
             }
-        };
-
-        fetchUser();
-    }, []);
+        },
+        enabled: !!token,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+        gcTime: 1000 * 60 * 10,  // 10 minutes
+        retry: false,
+    });
 
     const logout = () => {
         localStorage.removeItem('token');
-        setUser(null);
+        queryClient.setQueryData(['auth', 'me'], null);
+        queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
         navigate('/login');
     };
 
-    return { user, loading, logout };
+    return { 
+        user: user || null, 
+        loading, 
+        logout,
+        isAuthenticated: !!user && !!token,
+        error 
+    };
 }

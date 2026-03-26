@@ -1,9 +1,9 @@
 import { Home, Users, DollarSign, Activity, FileText, Settings, LogOut, Building, Receipt, Zap, LayoutList, UserCog, Archive } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
 export const Sidebar = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   
   const userRole = (user?.role || (Array.isArray(user?.roles) ? user.roles[0] : '') || '').toUpperCase();
   const normalizedRole = userRole.startsWith('ROLE_') ? userRole.substring(5) : 
@@ -14,9 +14,9 @@ export const Sidebar = () => {
   return (
     <aside className="w-64 bg-slate-900 border-r border-slate-800 text-slate-300 flex flex-col h-screen fixed hidden md:flex">
       <div className="h-16 flex items-center px-6 border-b border-slate-800">
-        <div className="text-2xl font-bold tracking-tighter text-slate-50">
+        <Link to="/" className="text-2xl font-bold tracking-tighter text-slate-50 hover:opacity-80 transition-opacity">
           QL<span className="text-emerald-500">KTX</span>
-        </div>
+        </Link>
       </div>
 
       <div className="flex-1 py-6 px-4 space-y-1 overflow-y-auto">
@@ -88,7 +88,10 @@ export const Sidebar = () => {
       </div>
 
       <div className="p-4 border-t border-slate-800">
-        <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 w-full transition-colors">
+        <button 
+          onClick={logout}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-800 w-full transition-colors"
+        >
           <LogOut size={20} /> <span className="font-medium">Đăng xuất</span>
         </button>
       </div>

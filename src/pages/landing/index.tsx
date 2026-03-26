@@ -40,9 +40,9 @@ export default function LandingPage() {
             <nav className={`fixed top-0 w-full z-50 backdrop-blur-xl border-b transition-colors duration-500 ${theme === 'dark' ? 'bg-neutral-900/70 border-white/10' : 'bg-white/70 border-black/5 shadow-sm'
                 }`}>
                 <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-                    <div className="text-2xl font-bold tracking-tighter">
+                    <Link to="/" className="text-2xl font-bold tracking-tighter hover:opacity-80 transition-opacity">
                         QL<span className="text-[#D4AF37]">KTX</span>
-                    </div>
+                    </Link>
                     <div className="hidden md:flex items-center space-x-8 text-sm font-medium">
                         <a href="#tour" className={`transition-colors ${theme === 'dark' ? 'hover:text-[#D4AF37]' : 'hover:text-[#D4AF37] text-neutral-600'}`}>Xem Tour</a>
                         <a href="#features" className={`transition-colors ${theme === 'dark' ? 'hover:text-[#D4AF37]' : 'hover:text-[#D4AF37] text-neutral-600'}`}>Dịch vụ</a>

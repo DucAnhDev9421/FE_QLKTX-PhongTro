@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { ArrowRight, Lock, User, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { authService, decodeToken } from '../../services/auth';
 
 export default function Login() {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -20,6 +22,7 @@ export default function Login() {
             const token = response?.data?.token || response?.token || response?.result?.token;
             if (token) {
                 localStorage.setItem('token', token);
+                queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
             }
 
             // Giải mã token để lấy role điều hướng

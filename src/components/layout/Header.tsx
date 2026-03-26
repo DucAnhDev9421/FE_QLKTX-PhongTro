@@ -12,8 +12,11 @@ export const Header = () => {
     return (
         <header className="h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 sticky top-0 z-40">
             <div className="flex items-center gap-4">
-                <button className="md:hidden text-slate-400 hover:text-slate-50">
+                <button className="md:hidden text-slate-400 hover:text-slate-50 flex items-center gap-2">
                     <Menu size={24} />
+                    <Link to="/" className="text-xl font-bold tracking-tighter text-slate-50 ml-1">
+                        QL<span className="text-emerald-500">KTX</span>
+                    </Link>
                 </button>
                 <div className="relative hidden sm:block">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />

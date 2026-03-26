@@ -48,6 +48,11 @@ export const buildingService = {
         return response.data;
     },
 
+    deleteFloorCompletely: async (id: number | string) => {
+        const response = await api.delete(`/v1/floors/${id}/completely`);
+        return response.data;
+    },
+
     updateFloor: async (id: number | string, data: any) => {
         const response = await api.put(`/v1/floors/${id}`, data);
         return response.data;

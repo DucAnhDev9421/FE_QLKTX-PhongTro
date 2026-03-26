@@ -19,6 +19,7 @@ export default function FloorManagementModal({ building, onClose }: Props) {
     const [editingFloorId, setEditingFloorId] = useState<number | null>(null);
     const [editName, setEditName] = useState('');
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isDeleteCompletelyModalOpen, setIsDeleteCompletelyModalOpen] = useState(false);
     const [floorToDelete, setFloorToDelete] = useState<{ id: number, name: string } | null>(null);
 
     const { data: responseData, isLoading } = useQuery({
@@ -62,6 +63,20 @@ export default function FloorManagementModal({ building, onClose }: Props) {
             setErrorMsg(err.response?.data?.message || 'Không thể xóa tầng. Vui lòng kiểm tra lại (có thể tầng đang chứa phòng).');
         }
     });
+    
+    const deleteCompletelyMutation = useMutation({
+        mutationFn: (id: number) => buildingService.deleteFloorCompletely(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['floors', building.buildingId] });
+            queryClient.invalidateQueries({ queryKey: ['buildings'] });
+            setErrorMsg('');
+            setIsDeleteCompletelyModalOpen(false);
+        },
+        onError: (err: any) => {
+            setIsDeleteCompletelyModalOpen(false);
+            setErrorMsg(err.response?.data?.message || 'Không thể xóa toàn bộ tầng. Vui lòng kiểm tra lại (có thể có phòng đang có người ở hoặc có hợp đồng).');
+        }
+    });
 
     const handleDelete = (id: number, name: string) => {
         setFloorToDelete({ id, name });
@@ -73,6 +88,13 @@ export default function FloorManagementModal({ building, onClose }: Props) {
             setErrorMsg('');
             deleteMutation.mutate(floorToDelete.id);
             setIsDeleteModalOpen(false);
+        }
+    };
+
+    const confirmDeleteCompletely = () => {
+        if (floorToDelete) {
+            setErrorMsg('');
+            deleteCompletelyMutation.mutate(floorToDelete.id);
         }
     };
 
@@ -261,15 +283,34 @@ export default function FloorManagementModal({ building, onClose }: Props) {
                                                 <>
                                                     <button 
                                                         onClick={() => startEditing(f)}
-                                                        disabled={deleteMutation.isPending || updateMutation.isPending}
+                                                        disabled={deleteMutation.isPending || updateMutation.isPending || deleteCompletelyMutation.isPending}
                                                         title="Sửa tên tầng"
                                                         className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-300 hover:bg-white/10 transition-colors disabled:opacity-30">
                                                         <Edit2 size={16} />
                                                     </button>
                                                     <button 
+                                                        onClick={() => {
+                                                            setFloorToDelete({ id: f.floorId, name: f.floorName });
+                                                            setIsDeleteCompletelyModalOpen(true);
+                                                        }}
+                                                        disabled={deleteMutation.isPending || updateMutation.isPending || deleteCompletelyMutation.isPending}
+                                                        title="Xóa toàn bộ tầng & phòng"
+                                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-rose-600 hover:text-rose-500 hover:bg-rose-500/10 transition-colors disabled:opacity-30">
+                                                        {deleteCompletelyMutation.isPending && deleteCompletelyMutation.variables === f.floorId ? 
+                                                            <Loader2 size={16} className="animate-spin" /> : 
+                                                            <div className="relative">
+                                                                <Trash2 size={16} />
+                                                                <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                                                                </span>
+                                                            </div>
+                                                        }
+                                                    </button>
+                                                    <button 
                                                         onClick={() => handleDelete(f.floorId, f.floorName)}
-                                                        disabled={deleteMutation.isPending || updateMutation.isPending}
-                                                        title="Xóa tầng"
+                                                        disabled={deleteMutation.isPending || updateMutation.isPending || deleteCompletelyMutation.isPending}
+                                                        title="Xóa tầng (chỉ khi trống)"
                                                         className="w-8 h-8 rounded-lg flex items-center justify-center text-rose-500/50 hover:text-rose-400 hover:bg-rose-500/10 transition-colors disabled:opacity-30">
                                                         {deleteMutation.isPending && deleteMutation.variables === f.floorId ? 
                                                             <Loader2 size={16} className="animate-spin text-rose-400" /> : 
@@ -292,9 +333,20 @@ export default function FloorManagementModal({ building, onClose }: Props) {
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={confirmDelete}
                 title="Xác nhận xóa tầng"
-                message={`Bạn có chắc chắn muốn xóa "${floorToDelete?.name}" không? Hành động này không thể hoàn tác.`}
+                message={`Bạn có chắc chắn muốn xóa "${floorToDelete?.name}" không? Hành động này chỉ thành công nếu tầng không chứa phòng nào.`}
                 confirmText="Xóa ngay"
                 isLoading={deleteMutation.isPending}
+                type="danger"
+            />
+
+            <ConfirmModal 
+                isOpen={isDeleteCompletelyModalOpen}
+                onClose={() => setIsDeleteCompletelyModalOpen(false)}
+                onConfirm={confirmDeleteCompletely}
+                title="CẢNH BÁO: XÓA TOÀN BỘ TẦNG"
+                message={`Bạn có chắc chắn muốn xóa toàn bộ "${floorToDelete?.name}" cùng TẤT CẢ các phòng thuộc tầng này không? Hành động này rất nguy hiểm và không thể hoàn tác.`}
+                confirmText="Tôi chắc chắn, xóa tất cả"
+                isLoading={deleteCompletelyMutation.isPending}
                 type="danger"
             />
 

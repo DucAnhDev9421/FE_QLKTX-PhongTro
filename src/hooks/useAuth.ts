@@ -4,9 +4,12 @@ import { useNavigate } from 'react-router-dom';
 
 export interface User {
     id: number;
+    userId: number; // Thêm userId từ backend
     username: string;
     role?: string;
     roles?: string[];
+    tenantId?: number;
+    fullName?: string; // Thêm fullName
     [key: string]: any;
 }
 
@@ -32,6 +35,11 @@ export function useAuth() {
                 const decoded = decodeToken(token);
                 if (decoded && decoded.scope) {
                     userData.role = decoded.scope;
+                }
+                
+                // Đồng bộ id và userId
+                if (userData.userId && !userData.id) {
+                    userData.id = userData.userId;
                 }
                 
                 setUser(userData);

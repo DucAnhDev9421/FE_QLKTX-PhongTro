@@ -1,7 +1,16 @@
 import { Home, Users, DollarSign, Activity, FileText, Settings, LogOut, Building, Receipt, Zap, LayoutList, UserCog, Archive } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 
 export const Sidebar = () => {
+  const { user } = useAuth();
+  
+  const userRole = (user?.role || (Array.isArray(user?.roles) ? user.roles[0] : '') || '').toUpperCase();
+  const normalizedRole = userRole.startsWith('ROLE_') ? userRole.substring(5) : 
+                        userRole.startsWith('SCOPE_') ? userRole.substring(6) : userRole;
+  
+  const isAdminOrOwner = normalizedRole === 'ADMIN' || normalizedRole === 'OWNER';
+
   return (
     <aside className="w-64 bg-slate-900 border-r border-slate-800 text-slate-300 flex flex-col h-screen fixed hidden md:flex">
       <div className="h-16 flex items-center px-6 border-b border-slate-800">
@@ -59,19 +68,23 @@ export const Sidebar = () => {
           <Activity size={20} /> <span className="font-medium">Sự cố</span>
         </NavLink>
 
-        <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-8 mb-4 px-2">Hệ thống</div>
+        {isAdminOrOwner && (
+          <>
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-8 mb-4 px-2">Hệ thống</div>
 
-        <NavLink to="/manage/users" className={({ isActive }) => isActive ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-emerald-500/10 text-emerald-500' : 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-800 hover:text-50'}>
-          <UserCog size={20} /> <span className="font-medium">Nhân viên</span>
-        </NavLink>
+            <NavLink to="/manage/users" className={({ isActive }) => isActive ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-emerald-500/10 text-emerald-500' : 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-800 hover:text-50'}>
+              <UserCog size={20} /> <span className="font-medium">Nhân viên</span>
+            </NavLink>
 
-        <NavLink to="/manage/services" className={({ isActive }) => isActive ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-emerald-500/10 text-emerald-500' : 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-800 hover:text-50'}>
-          <LayoutList size={20} /> <span className="font-medium">Dịch vụ</span>
-        </NavLink>
+            <NavLink to="/manage/services" className={({ isActive }) => isActive ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-emerald-500/10 text-emerald-500' : 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-800 hover:text-50'}>
+              <LayoutList size={20} /> <span className="font-medium">Dịch vụ</span>
+            </NavLink>
 
-        <NavLink to="/manage/settings" className={({ isActive }) => isActive ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-emerald-500/10 text-emerald-500' : 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-800 hover:text-50'}>
-          <Settings size={20} /> <span className="font-medium">Cài đặt</span>
-        </NavLink>
+            <NavLink to="/manage/settings" className={({ isActive }) => isActive ? 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-emerald-500/10 text-emerald-500' : 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-800 hover:text-50'}>
+              <Settings size={20} /> <span className="font-medium">Cài đặt</span>
+            </NavLink>
+          </>
+        )}
       </div>
 
       <div className="p-4 border-t border-slate-800">

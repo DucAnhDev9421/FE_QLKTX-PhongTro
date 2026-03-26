@@ -1,21 +1,43 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from '../../components/layout';
 import { Bell, Wallet, Building, Globe, Save, Moon, Monitor, QrCode, Tag, Plus, Edit2, Trash2, Loader2, Package } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { roomService } from '../../services/room';
 import RoomTypeModal from '../rooms/components/RoomTypeModal';
 import Alert from '../../components/ui/Alert';
+import { useAuth } from '../../hooks/useAuth';
 
-const TABS = [
-    { id: 'business', label: 'Cơ sở & Hệ thống', icon: <Building size={18} /> },
+const ALL_TABS = [
+    { id: 'business', label: 'Cơ sở & Hệ thống', icon: <Building size={18} />, adminOnly: true },
     { id: 'room-types', label: 'Phân loại phòng', icon: <Tag size={18} /> },
-    { id: 'payment', label: 'Cấu hình Thanh toán', icon: <Wallet size={18} /> },
+    { id: 'payment', label: 'Cấu hình Thanh toán', icon: <Wallet size={18} />, adminOnly: true },
     { id: 'notifications', label: 'Thông báo', icon: <Bell size={18} /> },
     { id: 'preferences', label: 'Tùy chỉnh hệ thống', icon: <Globe size={18} /> },
 ];
 
 export default function Settings() {
+    const { user, loading: authLoading } = useAuth();
+    const isAdmin = user?.role?.includes('SCOPE_ADMIN');
+    
+    const tabs = ALL_TABS.filter(tab => !tab.adminOnly || isAdmin);
+    
     const [activeTab, setActiveTab] = useState('business');
+
+    useEffect(() => {
+        if (!authLoading && !isAdmin && activeTab === 'business') {
+            setActiveTab('room-types');
+        }
+    }, [authLoading, isAdmin, activeTab]);
+
+    if (authLoading) {
+        return (
+            <Layout>
+                <div className="flex justify-center items-center py-20">
+                    <Loader2 size={32} className="animate-spin text-emerald-500" />
+                </div>
+            </Layout>
+        );
+    }
 
     return (
         <Layout>
@@ -28,7 +50,7 @@ export default function Settings() {
                 {/* Settings Sidebar */}
                 <div className="lg:w-72 flex-shrink-0">
                     <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-lg flex xl:flex-col overflow-x-auto gap-1">
-                        {TABS.map((tab) => (
+                        {tabs.map((tab) => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}

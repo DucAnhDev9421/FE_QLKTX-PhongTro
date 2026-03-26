@@ -59,7 +59,7 @@ function App() {
                             </Route>
                             
                             {/* Protect management routes */}
-                            <Route path="/manage" element={<ProtectedRoute allowedRoles={['ADMIN', 'OWNER']} />}>
+                            <Route path="/manage" element={<ProtectedRoute allowedRoles={['ADMIN', 'OWNER', 'STAFF']} />}>
                                 {/* Redirect /manage to /manage/dashboard */}
                                 <Route index element={<Navigate to="/manage/dashboard" replace />} />
                                 
@@ -75,9 +75,13 @@ function App() {
                                 <Route path="incidents" element={<Incidents />} />
                                 <Route path="services" element={<Services />} />
                                 <Route path="meter-readings" element={<MeterReadings />} />
-                                <Route path="users" element={<Users />} />
                                 <Route path="profile" element={<Profile />} />
-                                <Route path="settings" element={<Settings />} />
+                                
+                                {/* Admin/Owner only routes */}
+                                <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'OWNER']} />}>
+                                    <Route path="users" element={<Users />} />
+                                    <Route path="settings" element={<Settings />} />
+                                </Route>
                             </Route>
 
                             {/* Legacy redirects - optional but good for UX if they used old bookmarks */}

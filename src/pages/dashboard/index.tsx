@@ -3,8 +3,9 @@ import { Layout } from '../../components/layout';
 import { Home, Users, DollarSign, Activity, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { statisticsService } from '../../services/statisticsService';
-import { tenantService } from '../../services/tenantService';
 import { incidentService } from '../../services/incidentService';
+import { buildingService } from '../../services/building';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function Dashboard() {
     const [revenueData, setRevenueData] = useState<{ name: string; total: number }[]>([]);
@@ -13,14 +14,47 @@ export default function Dashboard() {
     const [occupancyRate, setOccupancyRate] = useState(0);
     const [tenantCount, setTenantCount] = useState(0);
     const [pendingIncidentsCount, setPendingIncidentsCount] = useState(0);
+    const [buildings, setBuildings] = useState<any[]>([]);
+    const [selectedBuildingId, setSelectedBuildingId] = useState<number | undefined>(undefined);
     const [loading, setLoading] = useState(true);
+    const { user } = useAuth();
+
+    const userRole = (user?.role || (Array.isArray(user?.roles) ? user.roles[0] : '') || '').toUpperCase();
+    const normalizedRole = userRole.startsWith('ROLE_') ? userRole.substring(5) : 
+                          userRole.startsWith('SCOPE_') ? userRole.substring(6) : userRole;
+    
+    const isAdmin = normalizedRole === 'ADMIN';
+
+    useEffect(() => {
+        const fetchBuildings = async () => {
+            try {
+                const data = await buildingService.getBuildings();
+                const allBuildings = data?.result || [];
+                setBuildings(allBuildings);
+                
+                // If not admin, auto-select first building if none selected
+                if (!isAdmin && allBuildings.length > 0 && selectedBuildingId === undefined) {
+                    setSelectedBuildingId(allBuildings[0].buildingId);
+                }
+            } catch (error) {
+                console.error("Error fetching buildings", error);
+            }
+        };
+        fetchBuildings();
+    }, [isAdmin, user?.managedBuildings]);
 
     useEffect(() => {
         const fetchStats = async () => {
+            if (!isAdmin && selectedBuildingId === undefined) {
+                setLoading(false);
+                return;
+            }
             try {
-                const roomStats = await statisticsService.getRoomStatusStatistics();
+                const roomStats = await statisticsService.getRoomStatusStatistics(selectedBuildingId);
                 setOccupancyData([{ 
-                    name: 'Toàn hệ thống', 
+                    name: selectedBuildingId 
+                        ? buildings.find(b => b.buildingId === selectedBuildingId)?.buildingName || 'Cơ sở' 
+                        : 'Toàn hệ thống', 
                     Occupied: roomStats.rentedRooms, 
                     Vacant: roomStats.emptyRooms 
                 }]);
@@ -29,6 +63,7 @@ export default function Dashboard() {
                     ? (roomStats.rentedRooms / roomStats.totalRooms) * 100 
                     : 0;
                 setOccupancyRate(rate);
+                setTenantCount(roomStats.activeTenants || 0);
 
                 const currentDate = new Date();
                 const currentMonth = currentDate.getMonth() + 1;
@@ -42,7 +77,7 @@ export default function Dashboard() {
                         m += 12;
                         y -= 1;
                     }
-                    revPromises.push(statisticsService.getRevenueByMonthAndYear(m, y));
+                    revPromises.push(statisticsService.getRevenueByMonthAndYear(m, y, selectedBuildingId));
                 }
                 
                 const revResults = await Promise.all(revPromises);
@@ -57,11 +92,7 @@ export default function Dashboard() {
                 }
 
                 // Fetch extra counts
-                const [tenants, incidents] = await Promise.all([
-                    tenantService.getTenants(),
-                    incidentService.getAllIncidents()
-                ]);
-                setTenantCount(tenants?.length || 0);
+                const incidents = await incidentService.getAllIncidents();
                 setPendingIncidentsCount(incidents?.filter((i: any) => i.status === 'PENDING').length || 0);
             } catch (error) {
                 console.error("Error fetching statistics", error);
@@ -71,7 +102,7 @@ export default function Dashboard() {
         };
 
         fetchStats();
-    }, []);
+    }, [selectedBuildingId]);
 
     const formatCurrency = (val: number) => {
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
@@ -85,10 +116,17 @@ export default function Dashboard() {
                     <p className="text-slate-400 space-x-2 text-sm">Theo dõi số liệu hoạt động kinh doanh hôm nay.</p>
                 </div>
                 <div className="flex gap-3">
-                    <select className="bg-slate-800 border-none text-sm text-slate-300 rounded-lg px-4 py-2 focus:ring-1 focus:ring-emerald-500 cursor-pointer">
-                        <option>Tất cả cơ sở</option>
-                        <option>Cơ sở 1</option>
-                        <option>Cơ sở 2</option>
+                    <select 
+                        className="bg-slate-800 border-none text-sm text-slate-300 rounded-lg px-4 py-2 focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                        value={selectedBuildingId || ""}
+                        onChange={(e) => setSelectedBuildingId(e.target.value ? Number(e.target.value) : undefined)}
+                    >
+                        {isAdmin && <option value="">Tất cả cơ sở</option>}
+                        {buildings.map((b) => (
+                            <option key={b.buildingId} value={b.buildingId}>
+                                {b.buildingName}
+                            </option>
+                        ))}
                     </select>
                     <button className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
                         Tải báo cáo

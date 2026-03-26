@@ -1,8 +1,7 @@
 export interface IncidentRequest {
     roomId: number;
+    tenantId: number;
     description: string;
-    priority?: string;
-    // adding typical fields based on BE APIs
 }
 
 export interface IncidentStatusRequest {
@@ -11,16 +10,11 @@ export interface IncidentStatusRequest {
 
 export interface IncidentResponse {
     incidentId: number;
+    roomId: number;
+    roomNumber: string;
+    tenantId: number;
+    tenantName: string;
     description: string;
     status: string;
-    priority?: string;
-    createdDate?: string;
-    room?: {
-        roomId: number;
-        roomNumber: string;
-    };
-    tenant?: {
-        tenantId: number;
-        fullName: string;
-    };
+    reportedDate: string;
 }

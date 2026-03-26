@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { contractService } from '../../services';
+import { NotificationBell } from '../../components/ui/NotificationBell';
 
 export default function LandingPage() {
     const { theme, toggleTheme } = useTheme();
@@ -56,6 +57,8 @@ export default function LandingPage() {
                         >
                             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
                         </button>
+
+                        {user && <NotificationBell variant="landing" />}
 
                         {user && hasRoom && (
                             <Link 

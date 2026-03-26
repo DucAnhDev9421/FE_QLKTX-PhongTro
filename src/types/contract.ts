@@ -35,6 +35,8 @@ export interface MemberRequest {
 export interface TerminateRequest {
     deductionAmount: number;
     deductionReason?: string;
+    finalElectricityReading?: number;
+    finalWaterReading?: number;
 }
 
 export interface LiquidationResponse {
@@ -45,6 +47,8 @@ export interface LiquidationResponse {
     refundAmount: number;
     deductionReason: string;
     contractStatus: string;
+    finalElectricityReading: number;
+    finalWaterReading: number;
 }
 
 export interface RoomRegistrationRequest {

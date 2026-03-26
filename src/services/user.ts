@@ -13,9 +13,9 @@ api.interceptors.request.use((config) => {
 });
 
 export const userService = {
-    getUsers: async (role?: string) => {
-        const response = await api.get('/v1/users', { params: { role } });
-        return response.data;
+    getUsers: async (role?: string, search?: string, page: number = 0, size: number = 10) => {
+        const response = await api.get('/v1/users', { params: { role, search, page, size } });
+        return response.data.result;
     },
     createUser: async (data: any) => {
         const response = await api.post('/v1/users', data);

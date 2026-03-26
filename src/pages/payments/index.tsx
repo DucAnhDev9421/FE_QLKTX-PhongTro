@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Layout } from '../../components/layout';
-import { CreditCard, Download, Search, Filter, CheckCircle2, AlertCircle, Clock, Receipt, Loader2, RefreshCw, Eye, CheckSquare } from 'lucide-react';
+import { CreditCard, Download, Search, CheckCircle2, AlertCircle, Clock, Receipt, Loader2, RefreshCw, CheckSquare, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { invoiceService, Invoice } from '../../services/invoice';
 
@@ -37,19 +37,22 @@ const formatCurrency = (val: number) => new Intl.NumberFormat('vi-VN').format(va
 export default function Payments() {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('ALL');
+    const [page, setPage] = useState(0);
     const queryClient = useQueryClient();
 
-    const { data: invoices = [], isLoading, error } = useQuery({
-        queryKey: ['invoices'],
-        queryFn: () => invoiceService.getInvoices(),
+    const { data: pageResult, isLoading, error } = useQuery({
+        queryKey: ['invoices', page],
+        queryFn: () => invoiceService.getInvoices(page, 10),
     });
+
+    const invoices: Invoice[] = pageResult?.data || [];
 
     const confirmMutation = useMutation({
         mutationFn: (id: number) => invoiceService.updateInvoice(id, { paymentStatus: 'PAID' } as any),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['invoices'] }),
     });
 
-    // Compute stats
+    // Compute stats - Note: these are based on CURRENT PAGE
     const stats = useMemo(() => {
         const paid = invoices.filter(i => i.paymentStatus === 'PAID');
         const pending = invoices.filter(i => i.paymentStatus === 'PENDING');
@@ -276,11 +279,33 @@ export default function Payments() {
                     </table>
                 </div>
 
-                {/* Footer */}
+                {/* Footer / Pagination */}
                 <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-900/50">
                     <span className="text-sm text-slate-500">
-                        Hiển thị <span className="font-medium text-slate-300">{filtered.length}</span> trong <span className="font-medium text-slate-300">{invoices.length}</span> hóa đơn
+                        Hiển thị <span className="font-medium text-slate-300">{filtered.length}</span> trong <span className="font-medium text-slate-300">{pageResult?.totalElements || 0}</span> hóa đơn
                     </span>
+                    
+                    {pageResult && pageResult.totalPages > 1 && (
+                        <div className="flex items-center gap-2">
+                            <button 
+                                disabled={page === 0}
+                                onClick={() => setPage(page - 1)}
+                                className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            <span className="text-sm text-slate-300 font-medium px-2">
+                                Trang {page + 1} / {pageResult.totalPages}
+                            </span>
+                            <button 
+                                disabled={page >= pageResult.totalPages - 1}
+                                onClick={() => setPage(page + 1)}
+                                className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
+                            >
+                                <ChevronRight size={18} />
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </Layout>

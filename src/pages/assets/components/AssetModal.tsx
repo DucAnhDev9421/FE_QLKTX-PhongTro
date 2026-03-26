@@ -1,31 +1,38 @@
 import { useState, FormEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Loader2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { assetService, AssetRequest } from '../../../services/asset';
 import Alert from '../../../components/ui/Alert';
+import { X, Loader2, Calendar as CalendarIcon } from 'lucide-react';
+// @ts-ignore
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 interface Props {
+    assetToEdit?: any;
     onClose: () => void;
 }
 
-export default function AssetModal({ onClose }: Props) {
+export default function AssetModal({ assetToEdit, onClose }: Props) {
+    const isEdit = !!assetToEdit;
     const queryClient = useQueryClient();
 
-    const [assetName, setAssetName] = useState('');
-    const [assetCode, setAssetCode] = useState('');
-    const [purchasePrice, setPurchasePrice] = useState<number | ''>('');
-    const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
+    const [assetName, setAssetName] = useState(assetToEdit?.assetName || '');
+    const [assetCode, setAssetCode] = useState(assetToEdit?.assetCode || '');
+    const [purchasePrice, setPurchasePrice] = useState<number | ''>(assetToEdit?.purchasePrice || '');
+    const [purchaseDate, setPurchaseDate] = useState<Date | null>(assetToEdit?.purchaseDate ? new Date(assetToEdit.purchaseDate) : new Date());
     const [errorMsg, setErrorMsg] = useState('');
 
     const mutation = useMutation({
-        mutationFn: (payload: AssetRequest) => assetService.createAsset(payload),
+        mutationFn: (payload: AssetRequest) => isEdit 
+            ? assetService.updateAsset(assetToEdit.assetId, payload)
+            : assetService.createAsset(payload),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['assets'] });
             onClose();
         },
         onError: (err: any) => {
-            setErrorMsg(err.response?.data?.message || 'Có lỗi xảy ra khi tạo tài sản.');
+            setErrorMsg(err.response?.data?.message || `Có lỗi xảy ra khi ${isEdit ? 'cập nhật' : 'tạo'} tài sản.`);
         }
     });
 
@@ -39,7 +46,7 @@ export default function AssetModal({ onClose }: Props) {
             assetName,
             assetCode: assetCode ? assetCode : undefined,
             purchasePrice: purchasePrice ? Number(purchasePrice) : undefined,
-            purchaseDate: purchaseDate ? purchaseDate : undefined
+            purchaseDate: purchaseDate ? purchaseDate.toISOString().split('T')[0] : undefined
         });
     };
 
@@ -51,7 +58,7 @@ export default function AssetModal({ onClose }: Props) {
             >
                 <div className="flex items-center justify-between p-5 border-b border-slate-800 shrink-0">
                     <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                        Tạo Danh Mục Tài Sản
+                        {isEdit ? 'Chỉnh sửa Tài Sản' : 'Tạo Danh Mục Tài Sản'}
                     </h2>
                     <button 
                         onClick={onClose}
@@ -99,13 +106,16 @@ export default function AssetModal({ onClose }: Props) {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-slate-400 mb-1">Ngày mua</label>
-                            <input 
-                                type="date"
-                                className="w-full bg-slate-950 border border-slate-700 text-slate-200 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:opacity-50"
-                                value={purchaseDate}
-                                onChange={(e) => setPurchaseDate(e.target.value)}
-                                disabled={mutation.isPending}
-                            />
+                            <div className="relative">
+                                <DatePicker
+                                    selected={purchaseDate}
+                                    onChange={(date: Date | null) => setPurchaseDate(date)}
+                                    dateFormat="dd/MM/yyyy"
+                                    className="w-full bg-slate-950/50 border border-slate-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-slate-200 px-4 py-2.5 rounded-xl text-sm transition-all shadow-inner placeholder:text-slate-600 pl-10"
+                                    disabled={mutation.isPending}
+                                />
+                                <CalendarIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -126,7 +136,7 @@ export default function AssetModal({ onClose }: Props) {
                         className="px-5 py-2.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl transition-colors disabled:opacity-50 flex items-center gap-2 shadow-[0_0_10px_rgba(16,185,129,0.2)]"
                     >
                         {mutation.isPending && <Loader2 size={16} className="animate-spin" />}
-                        Tạo Tài Sản
+                        {isEdit ? 'Cập nhật' : 'Tạo Tài Sản'}
                     </button>
                 </div>
             </div>

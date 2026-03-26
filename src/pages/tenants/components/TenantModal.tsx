@@ -4,6 +4,7 @@ import { X, Loader2, User, Phone, Mail, MapPin, CreditCard, Upload } from 'lucid
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { tenantService } from '../../../services/tenant';
 import Alert from '../../../components/ui/Alert';
+import { useAdministrativeUnits } from '../../../hooks/useAdministrativeUnits';
 
 interface Props {
     tenant: any | null;
@@ -13,6 +14,7 @@ interface Props {
 export default function TenantModal({ tenant, onClose }: Props) {
     const isEdit = !!tenant;
     const queryClient = useQueryClient();
+    const { provinces } = useAdministrativeUnits();
 
     const [formData, setFormData] = useState({
         fullName: tenant?.fullName || '',
@@ -56,7 +58,7 @@ export default function TenantModal({ tenant, onClose }: Props) {
         }
     });
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
@@ -142,11 +144,17 @@ export default function TenantModal({ tenant, onClose }: Props) {
 
                             <div>
                                 <label className="block text-sm font-medium text-slate-400 mb-1.5 flex items-center gap-1.5"><MapPin size={14}/> Quê quán (Tỉnh/Thành)</label>
-                                <input 
-                                    type="text" name="hometown" value={formData.hometown} onChange={handleChange}
-                                    placeholder="VD: TP.HCM, Hà Nội..."
-                                    className="w-full bg-black/40 border border-white/10 text-sm text-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all placeholder:text-slate-600"
-                                />
+                                <select 
+                                    name="hometown" value={formData.hometown} onChange={handleChange}
+                                    className="w-full bg-black/40 border border-white/10 text-sm text-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all appearance-none"
+                                >
+                                    <option value="" className="bg-slate-900">Chọn Tỉnh/Thành phố</option>
+                                    {provinces.map(p => (
+                                        <option key={p.id} value={p.name} className="bg-slate-900">
+                                            {p.name}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
 

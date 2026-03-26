@@ -55,6 +55,19 @@ export const assetService = {
         return response.data;
     },
 
+    updateAsset: async (id: number, payload: AssetRequest): Promise<{ result: Asset }> => {
+        const response = await axios.put(`${API_URL}/assets/${id}`, payload, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
+    },
+
+    deleteAsset: async (id: number): Promise<void> => {
+        await axios.delete(`${API_URL}/assets/${id}`, {
+            headers: getAuthHeaders()
+        });
+    },
+
     // ---- Room Assets ----
     getAssetsByRoom: async (roomId: number): Promise<{ result: RoomAsset[] }> => {
         const response = await axios.get(`${API_URL}/rooms/${roomId}/assets`, {
@@ -65,6 +78,21 @@ export const assetService = {
 
     assignAssetToRoom: async (payload: RoomAssetRequest): Promise<{ result: RoomAsset }> => {
         const response = await axios.post(`${API_URL}/room-assets`, payload, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
+    },
+
+    bulkAssignAssets: async (payload: any): Promise<{ result: string }> => {
+        const response = await axios.post(`${API_URL}/room-assets/bulk`, payload, {
+            headers: getAuthHeaders()
+        });
+        return response.data;
+    },
+
+    bulkRemoveAssets: async (payload: any): Promise<{ result: string }> => {
+        const response = await axios.delete(`${API_URL}/room-assets/bulk`, {
+            data: payload,
             headers: getAuthHeaders()
         });
         return response.data;

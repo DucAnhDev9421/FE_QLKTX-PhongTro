@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ShieldCheck, KeyRound, Loader2 } from 'lucide-react';
+import { X, ShieldCheck, KeyRound, Loader2, Building } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { userService } from '../../../services/user';
+import { buildingService } from '../../../services/building';
+import { useAuth } from '../../../hooks/useAuth';
 import Alert from '../../../components/ui/Alert';
 
 interface Props {
@@ -13,6 +15,12 @@ interface Props {
 export default function UserModal({ user, onClose }: Props) {
     const isEdit = !!user;
     const queryClient = useQueryClient();
+    const { user: currentUser } = useAuth();
+
+    const currentUserRole = (currentUser?.role || (Array.isArray(currentUser?.roles) ? currentUser.roles[0] : '') || '').toUpperCase();
+    const normalizedCurrentUserRole = currentUserRole.startsWith('ROLE_') ? currentUserRole.substring(5) : 
+                                    currentUserRole.startsWith('SCOPE_') ? currentUserRole.substring(6) : currentUserRole;
+    const isOwner = normalizedCurrentUserRole === 'OWNER';
 
     const [formData, setFormData] = useState({
         username: user?.username || '',
@@ -23,6 +31,9 @@ export default function UserModal({ user, onClose }: Props) {
         roleName: user?.roleName || user?.role?.roleName || user?.role || 'Staff'
     });
 
+    const [selectedBuildingIds, setSelectedBuildingIds] = useState<number[]>(user?.managedBuildings ? [] : []); // We'll sync this after fetching buildings
+    const [isBuildingsSynced, setIsBuildingsSynced] = useState(false);
+
     const [errorMsg, setErrorMsg] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
 
@@ -31,12 +42,42 @@ export default function UserModal({ user, onClose }: Props) {
         queryKey: ['roles'],
         queryFn: () => userService.getRoles(),
     });
-    const roles: any[] = rolesData?.result || [];
+    const roles: any[] = (rolesData?.result || []).filter((r: any) => {
+        if (isOwner) {
+            const rName = r.roleName.toUpperCase();
+            return !(rName === 'ADMIN' || rName === 'OWNER');
+        }
+        return true;
+    });
+
+    const { data: buildingsData } = useQuery({
+        queryKey: ['buildings'],
+        queryFn: () => buildingService.getBuildings(),
+    });
+    const buildings: any[] = buildingsData?.result || [];
+
+    // Sync selected buildings when buildings are loaded for edit mode
+    if (isEdit && buildings.length > 0 && !isBuildingsSynced) {
+        const managed = user.managedBuildings || [];
+        const initialIds = buildings
+            .filter(b => managed.includes(b.buildingName))
+            .map(b => b.buildingId);
+        setSelectedBuildingIds(initialIds);
+        setIsBuildingsSynced(true);
+    }
 
     const createMutation = useMutation({
-        mutationFn: (data: any) => userService.createUser(data),
+        mutationFn: async (data: any) => {
+            const res = await userService.createUser(data);
+            const newUserId = res.result?.userId;
+            if (newUserId && selectedBuildingIds.length > 0) {
+                await buildingService.assignManagerToBuildings(newUserId, selectedBuildingIds);
+            }
+            return res;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['users'] });
+            queryClient.invalidateQueries({ queryKey: ['buildings'] });
             onClose();
         },
         onError: (err: any) => {
@@ -45,9 +86,14 @@ export default function UserModal({ user, onClose }: Props) {
     });
 
     const updateMutation = useMutation({
-        mutationFn: (data: any) => userService.updateUser(user.userId, data),
+        mutationFn: async (data: any) => {
+            const res = await userService.updateUser(user.userId, data);
+            await buildingService.assignManagerToBuildings(user.userId, selectedBuildingIds);
+            return res;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['users'] });
+            queryClient.invalidateQueries({ queryKey: ['buildings'] });
             setSuccessMsg('Cập nhật thông tin thành công!');
             setTimeout(() => onClose(), 1000);
         },
@@ -82,6 +128,14 @@ export default function UserModal({ user, onClose }: Props) {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleBuildingToggle = (buildingId: number) => {
+        setSelectedBuildingIds(prev => 
+            prev.includes(buildingId) 
+                ? prev.filter(id => id !== buildingId)
+                : [...prev, buildingId]
+        );
     };
 
     const isSubmitting = createMutation.isPending || updateMutation.isPending;
@@ -177,6 +231,42 @@ export default function UserModal({ user, onClose }: Props) {
                             </div>
                         </div>
                     </div>
+
+                    {/* Building Assignment Checklist */}
+                    {(formData.roleName?.toUpperCase() === 'STAFF' || formData.roleName?.toUpperCase() === 'OWNER') && buildings.length > 0 && (
+                        <div className="border border-white/5 rounded-2xl p-5 bg-black/20 shadow-inner">
+                            <label className="block text-sm font-medium text-emerald-400 mb-3 flex items-center gap-1.5 text-left uppercase tracking-wider">
+                                <Building size={16} /> Chỉ định Tòa nhà quản lý
+                            </label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                                {buildings.map((b: any) => (
+                                    <label 
+                                        key={b.buildingId} 
+                                        className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${selectedBuildingIds.includes(b.buildingId) ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400' : 'bg-slate-900/40 border-white/5 text-slate-400 hover:border-white/10'}`}
+                                    >
+                                        <input 
+                                            type="checkbox" 
+                                            className="hidden"
+                                            checked={selectedBuildingIds.includes(b.buildingId)}
+                                            onChange={() => handleBuildingToggle(b.buildingId)}
+                                        />
+                                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${selectedBuildingIds.includes(b.buildingId) ? 'bg-emerald-500 border-emerald-500' : 'border-slate-600'}`}>
+                                            {selectedBuildingIds.includes(b.buildingId) && <X size={12} className="text-emerald-950 stroke-[4px]" />}
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-semibold truncate">{b.buildingName}</span>
+                                            <span className="text-[10px] opacity-70 truncate">{b.address}</span>
+                                        </div>
+                                    </label>
+                                ))}
+                            </div>
+                            {selectedBuildingIds.length === 0 && (
+                                <p className="text-[10px] text-amber-500/70 mt-3 italic">
+                                    * Chưa có tòa nhà nào được chọn. Nhân viên này sẽ không thấy thông tin tòa nhà nào.
+                                </p>
+                            )}
+                        </div>
+                    )}
 
                     <div className="border border-white/5 rounded-2xl p-5 bg-black/20 shadow-inner">
                         <label className="block text-sm font-medium text-amber-500 mb-3 flex items-center gap-1.5 text-left"><KeyRound size={16}/> Thông tin Đăng nhập</label>

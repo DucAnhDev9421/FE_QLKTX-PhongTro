@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Loader2, Layers, Plus, Search, HelpCircle } from 'lucide-react';
+import { X, Loader2, Layers, Plus, Search, HelpCircle, Trash2, Edit2, Check, RotateCcw } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { buildingService } from '../../../services/building';
 import Alert from '../../../components/ui/Alert';
+import ConfirmModal from '../../../components/ui/ConfirmModal';
 
 interface Props {
     building: any;
@@ -15,6 +16,10 @@ export default function FloorManagementModal({ building, onClose }: Props) {
     const [floorName, setFloorName] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [editingFloorId, setEditingFloorId] = useState<number | null>(null);
+    const [editName, setEditName] = useState('');
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [floorToDelete, setFloorToDelete] = useState<{ id: number, name: string } | null>(null);
 
     const { data: responseData, isLoading } = useQuery({
         queryKey: ['floors', building.buildingId],
@@ -45,6 +50,67 @@ export default function FloorManagementModal({ building, onClose }: Props) {
             setErrorMsg(err.response?.data?.message || 'Có lỗi xảy ra khi tạo tầng mới.');
         }
     });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: number) => buildingService.deleteFloor(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['floors', building.buildingId] });
+            queryClient.invalidateQueries({ queryKey: ['buildings'] });
+            setErrorMsg('');
+        },
+        onError: (err: any) => {
+            setErrorMsg(err.response?.data?.message || 'Không thể xóa tầng. Vui lòng kiểm tra lại (có thể tầng đang chứa phòng).');
+        }
+    });
+
+    const handleDelete = (id: number, name: string) => {
+        setFloorToDelete({ id, name });
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = () => {
+        if (floorToDelete) {
+            setErrorMsg('');
+            deleteMutation.mutate(floorToDelete.id);
+            setIsDeleteModalOpen(false);
+        }
+    };
+
+    const updateMutation = useMutation({
+        mutationFn: ({ id, data }: { id: number, data: any }) => buildingService.updateFloor(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['floors', building.buildingId] });
+            setEditingFloorId(null);
+            setEditName('');
+            setErrorMsg('');
+        },
+        onError: (err: any) => {
+            setErrorMsg(err.response?.data?.message || 'Không thể cập nhật tên tầng.');
+        }
+    });
+
+    const startEditing = (floor: any) => {
+        setEditingFloorId(floor.floorId);
+        setEditName(floor.floorName);
+        setErrorMsg('');
+    };
+
+    const cancelEditing = () => {
+        setEditingFloorId(null);
+        setEditName('');
+        setErrorMsg('');
+    };
+
+    const handleUpdate = (id: number) => {
+        if (!editName.trim()) {
+            setErrorMsg('Tên tầng không được để trống.');
+            return;
+        }
+        updateMutation.mutate({ 
+            id, 
+            data: { floorName: editName.trim(), buildingId: building.buildingId } 
+        });
+    };
 
     const handleCreate = (e: React.FormEvent) => {
         e.preventDefault();
@@ -148,21 +214,71 @@ export default function FloorManagementModal({ building, onClose }: Props) {
                             <div className="flex flex-col gap-3">
                                 {filteredFloors.map((f: any) => (
                                     <div key={f.floorId} className="bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 rounded-xl p-4 flex items-center justify-between group transition-all duration-200">
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-3 flex-1 overflow-hidden">
                                             <div className="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shadow-inner group-hover:scale-105 transition-transform duration-300 font-bold shrink-0">
                                                 {f.floorName.match(/\d+/) ? f.floorName.match(/\d+/)[0] : 'T'}
                                             </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-bold text-slate-200">{f.floorName}</span>
-                                                <span className="text-xs text-slate-500 font-mono">ID: {f.floorId}</span>
-                                            </div>
+                                            
+                                            {editingFloorId === f.floorId ? (
+                                                <div className="flex-1 flex gap-2 overflow-hidden">
+                                                    <input 
+                                                        type="text"
+                                                        autoFocus
+                                                        value={editName}
+                                                        onChange={(e) => setEditName(e.target.value)}
+                                                        className="flex-1 min-w-0 bg-black/40 border border-blue-500/30 text-sm text-slate-100 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500/40"
+                                                        placeholder="Tên tầng..."
+                                                        disabled={updateMutation.isPending}
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col overflow-hidden">
+                                                    <span className="text-sm font-bold text-slate-200 truncate">{f.floorName}</span>
+                                                    <span className="text-xs text-slate-500 font-mono">ID: {f.floorId}</span>
+                                                </div>
+                                            )}
                                         </div>
                                         
-                                        <button 
-                                            title="Sửa (Coming soon)"
-                                            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-300 hover:bg-white/10 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-30">
-                                            ...
-                                        </button>
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity ml-2">
+                                            {editingFloorId === f.floorId ? (
+                                                <>
+                                                    <button 
+                                                        onClick={() => handleUpdate(f.floorId)}
+                                                        disabled={updateMutation.isPending || !editName.trim()}
+                                                        title="Lưu"
+                                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors disabled:opacity-30">
+                                                        {updateMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                                                    </button>
+                                                    <button 
+                                                        onClick={cancelEditing}
+                                                        disabled={updateMutation.isPending}
+                                                        title="Hủy"
+                                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-white/10 transition-colors">
+                                                        <RotateCcw size={16} />
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <button 
+                                                        onClick={() => startEditing(f)}
+                                                        disabled={deleteMutation.isPending || updateMutation.isPending}
+                                                        title="Sửa tên tầng"
+                                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-300 hover:bg-white/10 transition-colors disabled:opacity-30">
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleDelete(f.floorId, f.floorName)}
+                                                        disabled={deleteMutation.isPending || updateMutation.isPending}
+                                                        title="Xóa tầng"
+                                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-rose-500/50 hover:text-rose-400 hover:bg-rose-500/10 transition-colors disabled:opacity-30">
+                                                        {deleteMutation.isPending && deleteMutation.variables === f.floorId ? 
+                                                            <Loader2 size={16} className="animate-spin text-rose-400" /> : 
+                                                            <Trash2 size={16} />
+                                                        }
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -170,6 +286,17 @@ export default function FloorManagementModal({ building, onClose }: Props) {
                     </div>
                 </div>
             </div>
+
+            <ConfirmModal 
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                title="Xác nhận xóa tầng"
+                message={`Bạn có chắc chắn muốn xóa "${floorToDelete?.name}" không? Hành động này không thể hoàn tác.`}
+                confirmText="Xóa ngay"
+                isLoading={deleteMutation.isPending}
+                type="danger"
+            />
 
             <style>{`
                 .slide-in-right {

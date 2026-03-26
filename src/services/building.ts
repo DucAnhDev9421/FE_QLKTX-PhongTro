@@ -41,5 +41,20 @@ export const buildingService = {
     createFloor: async (data: any) => {
         const response = await api.post('/v1/floors', data);
         return response.data;
+    },
+    
+    deleteFloor: async (id: number | string) => {
+        const response = await api.delete(`/v1/floors/${id}`);
+        return response.data;
+    },
+
+    updateFloor: async (id: number | string, data: any) => {
+        const response = await api.put(`/v1/floors/${id}`, data);
+        return response.data;
+    },
+
+    assignManagerToBuildings: async (userId: number | string, buildingIds: (number | string)[]) => {
+        const response = await api.put(`/v1/buildings/assign-manager/${userId}`, buildingIds);
+        return response.data;
     }
 };

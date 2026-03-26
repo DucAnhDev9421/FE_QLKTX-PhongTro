@@ -7,11 +7,16 @@ import RoomOverviewCard from './components/RoomOverviewCard';
 import RoommatesList from './components/RoommatesList';
 import ServicesCard from './components/ServicesCard';
 import RecentInvoices from './components/RecentInvoices';
+import ReportIncidentModal from './components/ReportIncidentModal';
+import IncidentHistory from './components/IncidentHistory';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function MyRoom() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const { user } = useAuth();
     const [showCancelModal, setShowCancelModal] = useState(false);
+    const [showIncidentModal, setShowIncidentModal] = useState(false);
     
     const { data: apiData, isLoading, error } = useQuery({
         queryKey: ['myRoom'],
@@ -162,6 +167,14 @@ export default function MyRoom() {
                             Hủy đăng ký
                         </button>
                     )}
+
+                    <button 
+                        onClick={() => setShowIncidentModal(true)}
+                        className="px-5 py-2.5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 hover:border-orange-500/40 rounded-2xl text-sm font-bold transition-all flex items-center gap-2 group shadow-lg shadow-orange-950/10"
+                    >
+                        <AlertCircle size={16} className="group-hover:rotate-12 transition-transform" />
+                        Báo sự cố
+                    </button>
                 </div>
 
                 {/* Room Hero Card */}
@@ -213,6 +226,7 @@ export default function MyRoom() {
                     <div className="space-y-6">
                         <RoommatesList members={roomData.members} />
                         <ServicesCard services={roomData.services} />
+                        {user && user.tenantId && <IncidentHistory tenantId={user.tenantId} />}
                     </div>
                 </div>
             </div>
@@ -259,6 +273,15 @@ export default function MyRoom() {
                         </div>
                     </div>
                 </div>
+            )}
+            {/* Incident Modal */}
+            {user && user.tenantId && apiData?.room?.roomId && (
+                <ReportIncidentModal
+                    isOpen={showIncidentModal}
+                    onClose={() => setShowIncidentModal(false)}
+                    roomId={apiData.room.roomId}
+                    tenantId={user.tenantId}
+                />
             )}
         </div>
     );

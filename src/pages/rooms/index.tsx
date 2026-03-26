@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Layout } from '../../components/layout';
-import { Search, Plus, Home, Users, CheckCircle2, Clock, Loader2, Edit, ImagePlus, Camera } from 'lucide-react';
+import { Search, Plus, Home, Users, CheckCircle2, Clock, Loader2, Edit, ImagePlus, Camera, Trash2 } from 'lucide-react';
 import { roomService } from '../../services/room';
 import { buildingService } from '../../services/building';
 import RoomModal from './components/RoomModal';
@@ -69,6 +69,24 @@ export default function Rooms() {
             queryClient.invalidateQueries({ queryKey: ['rooms'] });
         }
     });
+
+    const deleteMutation = useMutation({
+        mutationFn: (id: number) => roomService.deleteRoom(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['rooms'] });
+            alert('Xóa phòng thành công!');
+        },
+        onError: (error: any) => {
+            const message = error.response?.data?.message || 'Có lỗi xảy ra khi xóa phòng.';
+            alert(message);
+        }
+    });
+
+    const handleDelete = (id: number, roomNumber: string) => {
+        if (window.confirm(`Bạn có chắc chắn muốn xóa phòng ${roomNumber}? Hành động này không thể hoàn tác.`)) {
+            deleteMutation.mutate(id);
+        }
+    };
 
     // Frontend Text Filter
     const filteredRooms = rooms.filter((room: any) => 
@@ -159,6 +177,7 @@ export default function Rooms() {
                             key={room.roomId} 
                             room={room} 
                             onEdit={() => handleEdit(room)}
+                            onDelete={() => handleDelete(room.roomId, room.roomNumber)}
                             onChangeStatus={(status) => statusMutation.mutate({ id: room.roomId, status })}
                             onOpenImages={() => setImageModalRoom(room)}
                         />
@@ -197,7 +216,7 @@ function FilterButton({ active, onClick, children }: { active: boolean, onClick:
     );
 }
 
-function RoomCard({ room, onEdit, onChangeStatus, onOpenImages }: { room: any, onEdit: () => void, onChangeStatus: (status: string) => void, onOpenImages: () => void }) {
+function RoomCard({ room, onEdit, onDelete, onChangeStatus, onOpenImages }: { room: any, onEdit: () => void, onDelete: () => void, onChangeStatus: (status: string) => void, onOpenImages: () => void }) {
     const isAvailable = room.currentStatus === 'AVAILABLE';
     const isMaintenance = room.currentStatus === 'MAINTENANCE';
     const isBooked = room.currentStatus === 'BOOKED';
@@ -272,6 +291,16 @@ function RoomCard({ room, onEdit, onChangeStatus, onOpenImages }: { room: any, o
                             {room.roomNumber}
                         </h3>
                     </div>
+                    <button 
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete();
+                        }}
+                        className="p-1.5 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                        title="Xóa phòng"
+                    >
+                        <Trash2 size={16} />
+                    </button>
                 </div>
 
                 <div className="space-y-2 mb-4">

@@ -31,6 +31,14 @@ export interface InvoiceRequest {
     notes?: string;
 }
 
+export interface PageResponse<T> {
+    data: T[];
+    totalElements: number;
+    totalPages: number;
+    currentPage: number;
+    pageSize: number;
+}
+
 // Lấy Token do project dùng cookie hoặc localStorage
 const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
@@ -38,8 +46,8 @@ const getAuthHeaders = () => {
 };
 
 export const invoiceService = {
-    getInvoices: async (): Promise<Invoice[]> => {
-        const response = await axios.get(INVOICE_API, {
+    getInvoices: async (page: number = 0, size: number = 10): Promise<PageResponse<Invoice>> => {
+        const response = await axios.get(`${INVOICE_API}?page=${page}&size=${size}`, {
             headers: getAuthHeaders()
         });
         return response.data.result;

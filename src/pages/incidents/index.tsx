@@ -35,8 +35,8 @@ export default function Incidents() {
     const filteredIncidents = incidentData.filter((i: any) => 
         (statusFilter === '' || i.status === statusFilter) &&
         (i.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-         i.room?.roomNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-         i.tenant?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()))
+         i.roomNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+         i.tenantName?.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     return (
@@ -69,7 +69,6 @@ export default function Incidents() {
                         >
                             <option value="">Tất cả trạng thái</option>
                             <option value="PENDING">Chờ xử lý (Pending)</option>
-                            <option value="IN_PROGRESS">Đang xử lý (In Progress)</option>
                             <option value="RESOLVED">Đã hoàn thành (Resolved)</option>
                         </select>
                     </div>
@@ -104,22 +103,17 @@ export default function Incidents() {
                                             <span className="font-mono text-slate-200 font-medium text-xs">#{incident.incidentId}</span>
                                         </td>
                                         <td className="px-6 py-4 align-top">
-                                            <div className="font-medium text-slate-200">{incident.room?.roomNumber || 'Không rõ'}</div>
-                                            <div className="text-xs text-slate-500 mt-1">{incident.tenant?.fullName || 'Hệ thống'}</div>
+                                            <div className="font-medium text-slate-200">{incident.roomNumber || 'Không rõ'}</div>
+                                            <div className="text-xs text-slate-500 mt-1">{incident.tenantName || 'Hệ thống'}</div>
                                         </td>
                                         <td className="px-6 py-4 align-top max-w-xs">
                                             <div className="text-slate-300 break-words line-clamp-2" title={incident.description}>
                                                 {incident.description}
                                             </div>
-                                            {incident.priority && (
-                                                <span className={`inline-block mt-2 text-[10px] uppercase px-1.5 py-0.5 rounded ${incident.priority === 'HIGH' ? 'bg-rose-500/10 text-rose-500' : 'bg-slate-800 text-slate-400'}`}>
-                                                    Mức độ: {incident.priority}
-                                                </span>
-                                            )}
                                         </td>
                                         <td className="px-6 py-4 align-top">
                                             <div className="text-slate-300 text-xs">
-                                                {incident.createdDate ? format(new Date(incident.createdDate), 'dd/MM/yyyy HH:mm') : '-'}
+                                                {incident.reportedDate ? format(new Date(incident.reportedDate), 'dd/MM/yyyy HH:mm') : '-'}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 align-top text-center">
@@ -132,7 +126,6 @@ export default function Incidents() {
                                                 className="bg-slate-900 border border-slate-700 text-xs text-slate-300 rounded p-1.5 focus:ring-1 focus:ring-emerald-500 outline-none cursor-pointer"
                                             >
                                                 <option value="PENDING">Chờ xử lý</option>
-                                                <option value="IN_PROGRESS">Đang xử lý</option>
                                                 <option value="RESOLVED">Đã xong</option>
                                             </select>
                                         </td>

@@ -35,7 +35,7 @@ export const roomService = {
     },
 
     // Rooms
-    getRooms: async (params?: { floorId?: number, status?: string, minPrice?: number, maxPrice?: number }) => {
+    getRooms: async (params?: { buildingId?: number, floorId?: number, status?: string, minPrice?: number, maxPrice?: number }) => {
         const response = await api.get('/v1/rooms', { params });
         return response.data;
     },
@@ -66,6 +66,11 @@ export const roomService = {
         const response = await api.post(`/v1/rooms/${roomId}/images`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
+        return response.data;
+    },
+    
+    deleteRoom: async (id: number | string) => {
+        const response = await api.delete(`/v1/rooms/${id}`);
         return response.data;
     }
 };

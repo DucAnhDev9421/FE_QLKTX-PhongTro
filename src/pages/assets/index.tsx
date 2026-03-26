@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PackageOpen, Box, Calendar, DollarSign, Plus, Edit, Trash2, Search, Loader2, Building, Home } from 'lucide-react';
+import { PackageOpen, Box, Calendar, DollarSign, Plus, Edit, Trash2, Search, Loader2, Building, Home, Layers, Layers2 } from 'lucide-react';
 import { Layout } from '../../components/layout';
 import AssetModal from './components/AssetModal';
 import RoomAssetModal from './components/RoomAssetModal';
+import BulkRoomAssetModal from './components/BulkRoomAssetModal';
 import { assetService } from '../../services/asset';
 import { buildingService } from '../../services/building';
 import { roomService } from '../../services/room';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
 export default function Assets() {
     const queryClient = useQueryClient();
@@ -15,12 +17,20 @@ export default function Assets() {
 
     // Modal states
     const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
+    const [editingAsset, setEditingAsset] = useState<any>(null);
     const [isRoomAssetModalOpen, setIsRoomAssetModalOpen] = useState(false);
+    const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+    const [isBulkRemoveModalOpen, setIsBulkRemoveModalOpen] = useState(false);
     const [editingRoomAsset, setEditingRoomAsset] = useState<any>(null);
 
     // Filter states for Room Assets tab
     const [selectedBuildingId, setSelectedBuildingId] = useState<number | ''>('');
+    const [selectedFloorId, setSelectedFloorId] = useState<number | ''>('');
     const [selectedRoomId, setSelectedRoomId] = useState<number | ''>('');
+    
+    // Confirm Dialog states
+    const [confirmId, setConfirmId] = useState<number | null>(null);
+    const [confirmType, setConfirmType] = useState<'global' | 'room' | null>(null);
 
     // Fetch Global Assets
     const { data: globalAssetsData, isLoading: isLoadingGlobal } = useQuery({
@@ -36,17 +46,31 @@ export default function Assets() {
     });
     const buildings = buildingsData?.result || [];
 
-    // Fetch All Rooms
+    // Fetch Floors based on selected building
+    const { data: floorsData } = useQuery({
+        queryKey: ['floors', selectedBuildingId],
+        queryFn: () => buildingService.getFloorsByBuilding(Number(selectedBuildingId)),
+        enabled: !!selectedBuildingId
+    });
+    const floors = floorsData?.result || [];
+
+    // Fetch All Rooms (already fetched as allRooms)
     const { data: allRoomsData } = useQuery({
         queryKey: ['rooms'],
         queryFn: () => roomService.getRooms()
     });
     const allRooms = allRoomsData?.result || [];
 
-    // Filter rooms by selected building
+    // Filter rooms by selected building and floor
     const selectedBuilding = buildings.find((b: any) => b.buildingId === selectedBuildingId);
+    const selectedFloor = floors.find((f: any) => f.floorId === selectedFloorId);
+    
     const rooms = selectedBuilding 
-        ? allRooms.filter((r: any) => r.buildingName === selectedBuilding.buildingName)
+        ? allRooms.filter((r: any) => {
+            const matchBuilding = r.buildingName === selectedBuilding.buildingName;
+            const matchFloor = selectedFloor ? r.floorName === selectedFloor.floorName : true;
+            return matchBuilding && matchFloor;
+        })
         : [];
 
     // Fetch Room Assets based on selected room
@@ -62,6 +86,22 @@ export default function Assets() {
         mutationFn: (id: number) => assetService.removeRoomAsset(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['room-assets', selectedRoomId] });
+            setConfirmId(null);
+            setConfirmType(null);
+        }
+    });
+
+    const deleteAssetMutation = useMutation({
+        mutationFn: (id: number) => assetService.deleteAsset(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['assets'] });
+            setConfirmId(null);
+            setConfirmType(null);
+        },
+        onError: (err: any) => {
+            alert(err.response?.data?.message || 'Không thể xóa tài sản. Có thể tài sản đang được sử dụng.');
+            setConfirmId(null);
+            setConfirmType(null);
         }
     });
 
@@ -115,13 +155,29 @@ export default function Assets() {
                                 <Plus size={18} /> Nhập tài sản mới
                             </button>
                         ) : (
-                            <button 
-                                onClick={() => setIsRoomAssetModalOpen(true)}
-                                disabled={!selectedRoomId}
-                                className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-emerald-900/20 flex items-center gap-2"
-                            >
-                                <Plus size={18} /> Gán vào phòng
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => setIsBulkModalOpen(true)}
+                                    disabled={!selectedBuildingId}
+                                    className="bg-slate-800 hover:bg-slate-700 disabled:bg-slate-800 disabled:text-slate-600 text-emerald-400 border border-slate-700 px-5 py-2.5 rounded-xl font-medium transition-colors flex items-center gap-2"
+                                >
+                                    <Layers size={18} /> Gán hàng loạt
+                                </button>
+                                <button 
+                                    onClick={() => setIsBulkRemoveModalOpen(true)}
+                                    disabled={!selectedBuildingId}
+                                    className="bg-slate-800 hover:bg-slate-700 disabled:bg-slate-800 disabled:text-slate-600 text-rose-400 border border-slate-700 px-5 py-2.5 rounded-xl font-medium transition-colors flex items-center gap-2"
+                                >
+                                    <Layers2 size={18} /> Gỡ hàng loạt
+                                </button>
+                                <button 
+                                    onClick={() => setIsRoomAssetModalOpen(true)}
+                                    disabled={!selectedRoomId}
+                                    className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-emerald-900/20 flex items-center gap-2"
+                                >
+                                    <Plus size={18} /> Gán vào phòng
+                                </button>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -178,7 +234,8 @@ export default function Assets() {
                                                 <th className="p-4 font-medium">Mã code</th>
                                                 <th className="p-4 font-medium">Tên tài sản</th>
                                                 <th className="p-4 font-medium">Ngày mua</th>
-                                                <th className="p-4 font-medium">Đơn giá nhập</th>
+                                                <th className="p-4 font-medium text-right">Đơn giá nhập</th>
+                                                <th className="p-4 font-medium text-right">Thao tác</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-800">
@@ -197,8 +254,33 @@ export default function Assets() {
                                                         <td className="p-4 text-slate-400 text-sm">
                                                             <div className="flex items-center gap-1.5"><Calendar size={14}/> {formatDate(asset.purchaseDate)}</div>
                                                         </td>
-                                                        <td className="p-4 font-mono text-emerald-400">
-                                                            <div className="flex items-center gap-1.5"><DollarSign size={14}/> {formatCurrency(asset.purchasePrice)}</div>
+                                                        <td className="p-4 font-mono text-emerald-400 text-right">
+                                                            <div className="flex items-center justify-end gap-1.5"><DollarSign size={14}/> {formatCurrency(asset.purchasePrice)}</div>
+                                                        </td>
+                                                        <td className="p-4 text-right">
+                                                            <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        setEditingAsset(asset);
+                                                                        setIsAssetModalOpen(true);
+                                                                    }}
+                                                                    className="p-2 bg-slate-800 text-slate-300 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                                                                >
+                                                                    <Edit size={16} />
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        setConfirmId(asset.assetId);
+                                                                        setConfirmType('global');
+                                                                    }}
+                                                                    disabled={deleteAssetMutation.isPending}
+                                                                    className="p-2 bg-slate-800 text-slate-300 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors disabled:opacity-50"
+                                                                >
+                                                                    {deleteAssetMutation.isPending && deleteAssetMutation.variables === asset.assetId ? 
+                                                                        <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />
+                                                                    }
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 ))
@@ -214,40 +296,66 @@ export default function Assets() {
                 {activeTab === 'room' && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
                         {/* Selector Area */}
-                        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 backdrop-blur-sm grid md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2 flex items-center gap-2">
-                                    <Building size={16} /> Cơ sở / Tòa nhà
-                                </label>
-                                <select 
-                                    className="w-full bg-slate-950 border border-slate-800 text-slate-200 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                                    value={selectedBuildingId}
-                                    onChange={(e) => {
-                                        setSelectedBuildingId(Number(e.target.value));
-                                        setSelectedRoomId(''); // Reset room
-                                    }}
-                                >
-                                    <option value="">-- Chọn Tòa nhà --</option>
-                                    {buildings.map((b: any) => (
-                                        <option key={b.buildingId} value={b.buildingId}>{b.buildingName}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2 flex items-center gap-2">
-                                    <Home size={16} /> Chọn Phòng <span className="text-xs text-rose-500">*</span>
-                                </label>
-                                <select 
-                                    className="w-full bg-slate-950 border border-slate-800 text-slate-200 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:opacity-50"
-                                    value={selectedRoomId}
-                                    onChange={(e) => setSelectedRoomId(Number(e.target.value))}
-                                    disabled={!selectedBuildingId}
-                                >
-                                    <option value="">-- Chọn Phòng --</option>
-                                    {rooms.map((r: any) => (
-                                        <option key={r.roomId} value={r.roomId}>Phòng {r.roomNumber}</option>
-                                    ))}
-                                </select>
+                        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 backdrop-blur-sm">
+                            <div className="flex flex-col md:flex-row gap-4 items-end">
+                                <div className="w-full md:w-64">
+                                    <label className="block text-sm font-medium text-slate-400 mb-2 flex items-center gap-2">
+                                        <Building size={16} /> Cơ sở / Tòa nhà
+                                    </label>
+                                    <select 
+                                        className="w-full bg-slate-900 border border-slate-700 text-slate-200 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all cursor-pointer"
+                                        value={selectedBuildingId}
+                                        onChange={(e) => {
+                                            setSelectedBuildingId(e.target.value ? Number(e.target.value) : '');
+                                            setSelectedFloorId(''); // Reset floor
+                                            setSelectedRoomId(''); // Reset room
+                                        }}
+                                    >
+                                        <option value="">-- Tất cả cơ sở --</option>
+                                        {buildings.map((b: any) => (
+                                            <option key={b.buildingId} value={b.buildingId}>{b.buildingName}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="w-full md:w-64">
+                                    <label className="block text-sm font-medium text-slate-400 mb-2 flex items-center gap-2">
+                                        <Layers size={16} /> Tầng
+                                    </label>
+                                    <select 
+                                        className="w-full bg-slate-900 border border-slate-700 text-slate-200 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all cursor-pointer disabled:opacity-50"
+                                        value={selectedFloorId}
+                                        onChange={(e) => {
+                                            setSelectedFloorId(e.target.value ? Number(e.target.value) : '');
+                                            setSelectedRoomId(''); // Reset room
+                                        }}
+                                        disabled={!selectedBuildingId}
+                                    >
+                                        <option value="">-- Tất cả tầng --</option>
+                                        {floors.map((f: any) => (
+                                            <option key={f.floorId} value={f.floorId}>{f.floorName}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="w-full md:w-64">
+                                    <label className="block text-sm font-medium text-slate-400 mb-2 flex items-center gap-2">
+                                        <Home size={16} /> Phòng
+                                    </label>
+                                    <select 
+                                        className="w-full bg-slate-900 border border-slate-700 text-slate-200 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all cursor-pointer disabled:opacity-50"
+                                        value={selectedRoomId}
+                                        onChange={(e) => setSelectedRoomId(e.target.value ? Number(e.target.value) : '')}
+                                        disabled={!selectedBuildingId}
+                                    >
+                                        <option value="">-- Chọn phòng --</option>
+                                        {rooms.map((r: any) => (
+                                            <option key={r.roomId} value={r.roomId}>
+                                                Phòng {r.roomNumber} ({r.floorName})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
@@ -302,9 +410,8 @@ export default function Assets() {
                                                                 </button>
                                                                 <button 
                                                                     onClick={() => {
-                                                                        if (window.confirm('Bạn có chắc chắn muốn gỡ tài sản này khỏi phòng?')) {
-                                                                            removeRoomAssetMutation.mutate(ra.roomAssetId);
-                                                                        }
+                                                                        setConfirmId(ra.roomAssetId);
+                                                                        setConfirmType('room');
                                                                     }}
                                                                     disabled={removeRoomAssetMutation.isPending}
                                                                     className="p-2 bg-slate-800 text-slate-300 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors disabled:opacity-50"
@@ -336,7 +443,13 @@ export default function Assets() {
 
             {/* Modals */}
             {isAssetModalOpen && (
-                <AssetModal onClose={() => setIsAssetModalOpen(false)} />
+                <AssetModal 
+                    assetToEdit={editingAsset} 
+                    onClose={() => {
+                        setIsAssetModalOpen(false);
+                        setEditingAsset(null);
+                    }} 
+                />
             )}
 
             {isRoomAssetModalOpen && selectedRoomId && (
@@ -349,6 +462,42 @@ export default function Assets() {
                     }} 
                 />
             )}
+
+            {isBulkModalOpen && selectedBuildingId && (
+                <BulkRoomAssetModal 
+                    buildingId={Number(selectedBuildingId)}
+                    mode="ASSIGN"
+                    onClose={() => setIsBulkModalOpen(false)}
+                />
+            )}
+
+            {isBulkRemoveModalOpen && selectedBuildingId && (
+                <BulkRoomAssetModal 
+                    buildingId={Number(selectedBuildingId)}
+                    mode="REMOVE"
+                    onClose={() => setIsBulkRemoveModalOpen(false)}
+                />
+            )}
+
+            {/* Confirm Modal */}
+            <ConfirmModal 
+                isOpen={!!confirmId}
+                onClose={() => {
+                    setConfirmId(null);
+                    setConfirmType(null);
+                }}
+                onConfirm={() => {
+                    if (confirmType === 'global' && confirmId) deleteAssetMutation.mutate(confirmId);
+                    if (confirmType === 'room' && confirmId) removeRoomAssetMutation.mutate(confirmId);
+                }}
+                title={confirmType === 'global' ? 'Xóa tài sản khỏi danh mục' : 'Gỡ tài sản khỏi phòng'}
+                message={confirmType === 'global' 
+                    ? 'Bạn có chắc chắn muốn xóa tài sản này? Hành động này không thể hoàn tác nếu tài sản chưa được sử dụng.' 
+                    : 'Bạn có chắc chắn muốn gỡ tài sản này khỏi phòng?'}
+                isLoading={deleteAssetMutation.isPending || removeRoomAssetMutation.isPending}
+                confirmText="Xác nhận xóa"
+                type="danger"
+            />
         </Layout>
     );
 }

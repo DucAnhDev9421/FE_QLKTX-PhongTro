@@ -30,16 +30,23 @@ export interface RoomStatusStatisticsResponse {
     totalRooms: number;
     rentedRooms: number;
     emptyRooms: number;
+    activeTenants: number;
 }
 
 export const statisticsService = {
-    getRevenueByMonthAndYear: async (month: number, year: number): Promise<RevenueMonthResponse> => {
-        const response = await api.get(`/statistics/revenue?month=${month}&year=${year}`);
+    getRevenueByMonthAndYear: async (month: number, year: number, buildingId?: number): Promise<RevenueMonthResponse> => {
+        const url = buildingId 
+            ? `/statistics/revenue?month=${month}&year=${year}&buildingId=${buildingId}`
+            : `/statistics/revenue?month=${month}&year=${year}`;
+        const response = await api.get(url);
         return response.data.result;
     },
 
-    getRoomStatusStatistics: async (): Promise<RoomStatusStatisticsResponse> => {
-        const response = await api.get('/statistics/rooms');
+    getRoomStatusStatistics: async (buildingId?: number): Promise<RoomStatusStatisticsResponse> => {
+        const url = buildingId 
+            ? `/statistics/rooms?buildingId=${buildingId}`
+            : '/statistics/rooms';
+        const response = await api.get(url);
         return response.data.result;
     },
 

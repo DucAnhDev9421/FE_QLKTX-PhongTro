@@ -19,7 +19,6 @@ export default function MeterReadings() {
     const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
 
     const [selectedBuildingId, setSelectedBuildingId] = useState<number | ''>('');
-    const [selectedFloorId, setSelectedFloorId] = useState<number | ''>('');
     
     // Default system services (fetch from DB to get ID)
     const [selectedServiceId, setSelectedServiceId] = useState<number | ''>('');
@@ -31,21 +30,32 @@ export default function MeterReadings() {
     });
     const buildings = buildingsData?.result || EMPTY_ARRAY;
 
-    // Fetch Floors for filtering (based on selected building)
-    const { data: floorsData } = useQuery({
-        queryKey: ['floors', selectedBuildingId],
-        queryFn: () => buildingService.getFloorsByBuilding(selectedBuildingId as number),
+
+    // Fetch Rooms in selected building
+    const { data: roomsData, isLoading: isRoomsLoading } = useQuery({
+        queryKey: ['rooms', selectedBuildingId],
+        queryFn: () => roomService.getRooms({ 
+            buildingId: selectedBuildingId as number
+        }),
         enabled: !!selectedBuildingId
     });
-    const floors = floorsData?.result || EMPTY_ARRAY;
-
-    // Fetch Rooms on selected floor
-    const { data: roomsData, isLoading: isRoomsLoading } = useQuery({
-        queryKey: ['rooms', selectedFloorId],
-        queryFn: () => roomService.getRooms({ floorId: selectedFloorId as number }),
-        enabled: !!selectedFloorId
-    });
-    const rooms = roomsData?.result || EMPTY_ARRAY;
+    const rawRooms = roomsData?.result || EMPTY_ARRAY;
+    const rooms = useMemo(() => {
+        if (!selectedBuildingId) return EMPTY_ARRAY;
+        
+        const selectedBuilding = buildings.find((b: any) => b.buildingId === selectedBuildingId);
+        
+        return rawRooms.filter((r: any) => {
+            // Try different ways to find buildingId
+            const bId = r.buildingId || r.floor?.building?.buildingId || r.floor?.buildingId;
+            if (bId === selectedBuildingId) return true;
+            
+            // Fallback to buildingName if ID is not found
+            if (selectedBuilding && r.buildingName === selectedBuilding.buildingName) return true;
+            
+            return false;
+        });
+    }, [rawRooms, selectedBuildingId, buildings]);
 
     // Fetch All Services to get IDs maps
     const { data: servicesData } = useQuery({
@@ -172,7 +182,7 @@ export default function MeterReadings() {
     const monthOptions = useMemo(() => generateMonths(), []);
 
     const isDataLoading = isRoomsLoading || isLastReadingsLoading || isCurrentReadingsLoading;
-    const isSaveDisabled = mutation.isPending || !selectedServiceId || !selectedFloorId;
+    const isSaveDisabled = mutation.isPending || !selectedServiceId || !selectedBuildingId;
 
     return (
         <Layout>
@@ -221,7 +231,6 @@ export default function MeterReadings() {
                             value={String(selectedBuildingId)}
                             onChange={(e) => {
                                 setSelectedBuildingId(e.target.value ? Number(e.target.value) : '');
-                                setSelectedFloorId('');
                             }}
                             className="bg-slate-950 border border-slate-700 hover:border-emerald-500/50 text-slate-200 px-4 py-2.5 rounded-xl text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-emerald-500/50 flex-1 xl:flex-none">
                             <option value="">-- Chọn Cơ sở --</option>
@@ -230,16 +239,6 @@ export default function MeterReadings() {
                             ))}
                         </select>
 
-                        <select 
-                            value={String(selectedFloorId)}
-                            onChange={(e) => setSelectedFloorId(e.target.value ? Number(e.target.value) : '')}
-                            disabled={!selectedBuildingId}
-                            className="bg-slate-950 border border-slate-700 hover:border-emerald-500/50 text-slate-200 px-4 py-2.5 rounded-xl text-sm transition-colors focus:outline-none focus:ring-1 focus:ring-emerald-500/50 disabled:opacity-50 flex-1 xl:flex-none cursor-pointer">
-                            <option value="">-- Chọn Tầng --</option>
-                            {floors.map((f: any) => (
-                                <option key={f.floorId} value={f.floorId}>{f.floorName}</option>
-                            ))}
-                        </select>
 
                         <select 
                             value={`${selectedMonth}-${selectedYear}`}
@@ -266,15 +265,15 @@ export default function MeterReadings() {
                     </div>
                 )}
 
-                {!selectedFloorId ? (
+                {!selectedBuildingId ? (
                     <div className="flex flex-col items-center justify-center h-[400px] text-slate-500">
                         <Filter size={48} className="mb-4 opacity-20" />
-                        <p>Vui lòng Chọn Cơ sở và Tầng để hiển thị danh sách phòng.</p>
+                        <p>Vui lòng Chọn Cơ sở để hiển thị danh sách phòng.</p>
                     </div>
                 ) : rooms.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-[400px] text-slate-500">
                         <AlertCircle size={48} className="mb-4 opacity-20 text-rose-500" />
-                        <p>Tầng này hiện chưa có phòng nào.</p>
+                        <p>Cơ sở này hiện chưa có phòng nào.</p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">

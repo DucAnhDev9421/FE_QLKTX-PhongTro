@@ -2,27 +2,29 @@ import { api } from './api';
 
 export interface NotificationRequest {
     title: string;
-    message: string;
+    content: string; // Đồng bộ với backend (content thay vì message)
     type: string;
-    targetType: string;
+    targetType?: string;
     targetId?: number;
+    userIds?: number[]; // Thêm userIds
 }
 
 export interface NotificationResponse {
     notificationId: number;
     title: string;
-    message: string;
+    content: string; // Đồng bộ với backend
     type: string;
-    targetType: string;
+    targetType?: string;
     targetId?: number;
     createdDate: string;
 }
 
 export interface UserNotificationResponse {
-    userNotificationId: number;
-    notificationTitle: string;
-    notificationMessage: string;
-    notificationType: string;
+    id: number;
+    notificationId: number;
+    title: string;
+    content: string;
+    type: string;
     createdDate: string;
     isRead: boolean;
 }

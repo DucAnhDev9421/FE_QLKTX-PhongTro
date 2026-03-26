@@ -4,6 +4,7 @@ import { X, Loader2, Building, MapPin, Layers, UserCog } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { buildingService } from '../../../services/building';
 import { userService } from '../../../services/user';
+import { useAuth } from '../../../hooks/useAuth';
 import Alert from '../../../components/ui/Alert';
 
 interface Props {
@@ -14,23 +15,25 @@ interface Props {
 export default function BuildingModal({ building, onClose }: Props) {
     const isEdit = !!building;
     const queryClient = useQueryClient();
+    const { user: currentUser } = useAuth();
+    const curUserId = currentUser?.userId || currentUser?.id;
 
     const [formData, setFormData] = useState({
         buildingName: building?.buildingName || '',
         address: building?.address || '',
         totalFloors: building?.totalFloors || '',
-        managerId: building?.managerId || ''
+        managerId: building?.managerId || (!isEdit ? curUserId : '') || ''
     });
 
     const [errorMsg, setErrorMsg] = useState('');
 
     // Fetch managers (users with STAFF, ADMIN, OWNER)
     const { data: usersData, isLoading: isLoadingUsers } = useQuery({
-        queryKey: ['users'],
-        queryFn: () => userService.getUsers()
+        queryKey: ['users-for-selection'],
+        queryFn: () => userService.getUsers(undefined, undefined, 0, 1000)
     });
 
-    const managers = (usersData?.result || []).filter((u: any) => {
+    const managers = (usersData?.data || []).filter((u: any) => {
         const rName = (u.roleName || u.role?.roleName || '').toUpperCase();
         return rName === 'ADMIN' || rName === 'SCOPE_ADMIN' || 
                rName === 'OWNER' || rName === 'SCOPE_OWNER' || 

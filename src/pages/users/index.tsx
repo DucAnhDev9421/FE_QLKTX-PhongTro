@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo, useDeferredValue } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Layout } from '../../components/layout';
-import { Search, Plus, ShieldCheck, Shield, UserCog, User as UserIcon, Lock, Unlock, Edit, Trash2 } from 'lucide-react';
+import { Search, Plus, ShieldCheck, Shield, UserCog, User as UserIcon, Lock, Unlock, Edit, Trash2, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import UserModal from './components/UserModal';
 import { userService } from '../../services/user';
+import { useAuth } from '../../hooks/useAuth';
 import ConfirmModal from '../../components/ui/ConfirmModal';
+import defaultAvatar from '../../assets/man-avatar-png-image_6514640.png';
 
 const RoleBadge = ({ role }: { role: string }) => {
     switch (role?.toUpperCase().replace('SCOPE_', '').replace('ROLE_', '')) {
@@ -23,7 +25,9 @@ const RoleBadge = ({ role }: { role: string }) => {
 
 export default function Users() {
     const [searchTerm, setSearchTerm] = useState('');
+    const deferredSearch = useDeferredValue(searchTerm);
     const [roleFilter, setRoleFilter] = useState('ALL');
+    const [page, setPage] = useState(0);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
     
@@ -34,10 +38,22 @@ export default function Users() {
     });
 
     const queryClient = useQueryClient();
+    const { user: currentUser } = useAuth();
 
-    const { data: responseData, isLoading } = useQuery({
-        queryKey: ['users'],
-        queryFn: () => userService.getUsers()
+    const currentUserRole = (currentUser?.role || (Array.isArray(currentUser?.roles) ? currentUser.roles[0] : '') || '').toUpperCase();
+    const normalizedCurrentUserRole = currentUserRole.startsWith('ROLE_') ? currentUserRole.substring(5) : 
+                                    currentUserRole.startsWith('SCOPE_') ? currentUserRole.substring(6) : currentUserRole;
+    const isOwner = normalizedCurrentUserRole === 'OWNER';
+
+    // Fetch users with pagination and server-side filtering
+    const { data: pageResult, isLoading } = useQuery({
+        queryKey: ['users', roleFilter, page, deferredSearch],
+        queryFn: () => userService.getUsers(
+            roleFilter === 'ALL' ? undefined : roleFilter, 
+            deferredSearch || undefined, 
+            page, 
+            10
+        )
     });
 
     const { data: rolesData } = useQuery({
@@ -45,8 +61,13 @@ export default function Users() {
         queryFn: () => userService.getRoles()
     });
 
-    const users = responseData?.result || [];
+    const users = pageResult?.data || [];
     const roles: any[] = rolesData?.result || [];
+
+    // Reset page to 0 when search or filter changes
+    useMemo(() => {
+        setPage(0);
+    }, [deferredSearch, roleFilter]);
 
     const toggleStatusMutation = useMutation({
         mutationFn: ({ id, isActive }: { id: string | number, isActive: boolean }) => userService.updateUserStatus(id, isActive),
@@ -104,12 +125,14 @@ export default function Users() {
         });
     };
 
-    const filteredUsers = users.filter((u: any) => {
-        const matchSearch = (u.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (u.username || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (u.email || '').toLowerCase().includes(searchTerm.toLowerCase());
-        const matchRole = roleFilter === 'ALL' || (u.roleName || '').toUpperCase() === roleFilter.toUpperCase();
-        return matchSearch && matchRole;
+    // Server-side filters now, so we just use the users list directly.
+
+    const displayedRoles = roles.filter((r: any) => {
+        if (isOwner) {
+            const rName = r.roleName.toUpperCase();
+            return !(rName === 'ADMIN' || rName === 'OWNER');
+        }
+        return true;
     });
 
     return (
@@ -145,7 +168,7 @@ export default function Users() {
                     >
                         Tất cả
                     </button>
-                    {roles.map((r: any) => (
+                    {displayedRoles.map((r: any) => (
                         <button
                             key={r.roleId}
                             onClick={() => setRoleFilter(r.roleName.toUpperCase())}
@@ -158,7 +181,12 @@ export default function Users() {
             </div>
 
             {/* Users Data Grid */}
-            <div className="bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden relative min-h-[300px]">
+                {isLoading && (
+                    <div className="absolute inset-0 z-10 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center">
+                        <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+                    </div>
+                )}
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm text-slate-400">
                         <thead className="text-xs text-slate-400 uppercase bg-black/40 border-b border-white/10">
@@ -171,7 +199,7 @@ export default function Users() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {isLoading ? (
+                            {isLoading && users.length === 0 ? (
                                 Array.from({ length: 5 }).map((_, idx) => (
                                     <tr key={idx} className="animate-pulse bg-white/[0.02]">
                                         <td className="px-6 py-4"><div className="w-48 h-10 bg-white/5 rounded-lg"></div></td>
@@ -181,19 +209,23 @@ export default function Users() {
                                         <td className="px-6 py-4 text-right"><div className="w-8 h-8 bg-white/5 rounded-lg inline-block"></div></td>
                                     </tr>
                                 ))
-                            ) : filteredUsers.length === 0 ? (
+                            ) : users.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
                                         Không tìm thấy người dùng nào.
                                     </td>
                                 </tr>
                             ) : (
-                                filteredUsers.map((user: any) => (
+                                users.map((user: any) => (
                                     <tr key={user.userId} className={`hover:bg-white/5 transition-all duration-200 group cursor-pointer ${!user.isActive ? 'opacity-50 grayscale' : ''}`} onClick={() => handleEdit(user)}>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 font-bold flex items-center justify-center text-emerald-400 shrink-0 shadow-inner">
-                                                    {(user.fullName || user.username || 'U').charAt(0).toUpperCase()}
+                                                <div className="w-10 h-10 rounded-full bg-slate-800 border border-white/10 overflow-hidden shrink-0 shadow-inner">
+                                                    <img 
+                                                        src={defaultAvatar} 
+                                                        alt="Avatar" 
+                                                        className="w-full h-full object-cover"
+                                                    />
                                                 </div>
                                                 <div className="flex flex-col">
                                                     <span className="text-slate-200 font-semibold">{user.fullName || 'Chưa cập nhật'}</span>
@@ -208,7 +240,18 @@ export default function Users() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <RoleBadge role={user.roleName || user.role?.roleName || user.role} />
+                                            <div className="flex flex-col gap-2">
+                                                <RoleBadge role={user.roleName || user.role?.roleName || user.role} />
+                                                {user.managedBuildings && user.managedBuildings.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                        {user.managedBuildings.map((bName: string, i: number) => (
+                                                            <span key={i} className="px-1.5 py-0.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded text-[9px] font-medium leading-tight">
+                                                                {bName}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
@@ -255,10 +298,33 @@ export default function Users() {
                     </table>
                 </div>
 
+                {/* Pagination Footer */}
                 <div className="flex items-center justify-between px-6 py-4 border-t border-white/5 bg-black/20">
                     <span className="text-sm text-slate-500">
-                        Hiển thị <span className="font-medium text-slate-300">{filteredUsers.length}</span> người dùng
+                        Hiển thị <span className="font-medium text-slate-300">{users.length}</span> trong <span className="font-medium text-slate-300">{pageResult?.totalElements || 0}</span> người dùng
                     </span>
+
+                    {pageResult && pageResult.totalPages > 1 && (
+                        <div className="flex items-center gap-2">
+                            <button 
+                                disabled={page === 0}
+                                onClick={() => setPage(page - 1)}
+                                className="p-2 rounded-lg bg-slate-800/40 border border-white/10 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            <span className="text-sm text-slate-300 font-medium px-2">
+                                Trang {page + 1} / {pageResult.totalPages}
+                            </span>
+                            <button 
+                                disabled={page >= pageResult.totalPages - 1}
+                                onClick={() => setPage(page + 1)}
+                                className="p-2 rounded-lg bg-slate-800/40 border border-white/10 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
+                            >
+                                <ChevronRight size={18} />
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 

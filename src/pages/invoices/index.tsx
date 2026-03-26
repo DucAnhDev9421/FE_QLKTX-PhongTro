@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Layout } from '../../components/layout';
-import { Search, Filter, Plus, FileText, CheckCircle2, AlertCircle, Clock, Send, MoreVertical, Download, Loader2 } from 'lucide-react';
+import { Search, Filter, Plus, FileText, CheckCircle2, AlertCircle, Clock, Send, MoreVertical, Download, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import InvoiceModal from './components/InvoiceModal';
 import { useQuery } from '@tanstack/react-query';
 import { invoiceService, Invoice } from '../../services/invoice';
@@ -36,17 +36,17 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 export default function Invoices() {
     const [searchTerm, setSearchTerm] = useState('');
+    const [page, setPage] = useState(0);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
 
     // Fetch invoices from BE
-    const { data: invoicesData, isLoading } = useQuery({
-        queryKey: ['invoices'],
-        queryFn: () => invoiceService.getInvoices()
+    const { data: pageResult, isLoading } = useQuery({
+        queryKey: ['invoices', page],
+        queryFn: () => invoiceService.getInvoices(page, 10)
     });
 
-    // Cấu trúc trả về có thể được bọc trong `result` tùy backend formatter
-    const invoices: Invoice[] = (invoicesData as any)?.result || invoicesData || [];
+    const invoices: Invoice[] = pageResult?.data || [];
 
     const handleCreate = () => {
         setSelectedInvoice(null);
@@ -76,6 +76,9 @@ export default function Invoices() {
         let overdueAmount = 0;
         let overdueCount = 0;
 
+        // Note: Stats are based on the CURRENT PAGE data because we changed to backend pagination.
+        // For accurate total stats, we might need a separate total stats API.
+        // But for now, we'll keep it simple.
         invoices.forEach((inv) => {
             totalAmount += inv.totalAmount || 0;
             totalCount++;
@@ -244,6 +247,35 @@ export default function Invoices() {
                             ))}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Footer / Pagination */}
+                <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-900/50">
+                    <span className="text-sm text-slate-500">
+                        Hiển thị <span className="font-medium text-slate-300">{filteredInvoices.length}</span> trong <span className="font-medium text-slate-300">{pageResult?.totalElements || 0}</span> hóa đơn
+                    </span>
+                    
+                    {pageResult && pageResult.totalPages > 1 && (
+                        <div className="flex items-center gap-2">
+                            <button 
+                                disabled={page === 0}
+                                onClick={() => setPage(page - 1)}
+                                className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            <span className="text-sm text-slate-300 font-medium px-2">
+                                Trang {page + 1} / {pageResult.totalPages}
+                            </span>
+                            <button 
+                                disabled={page >= pageResult.totalPages - 1}
+                                onClick={() => setPage(page + 1)}
+                                className="p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
+                            >
+                                <ChevronRight size={18} />
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 
